@@ -1,5 +1,10 @@
 server:
-  port: 9090
+  port: 0
+
+eureka:
+  instance:
+    instance-id: ${spring.application.name}:${random.value}
+    prefer-ip-address: true
 
 logging:
   level:
