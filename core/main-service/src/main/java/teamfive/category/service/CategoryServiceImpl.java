@@ -15,10 +15,10 @@ import teamfive.category.dto.UpdateCategoryDto;
 import teamfive.category.mapper.SimpleCategoryMapper;
 import teamfive.category.model.Category;
 import teamfive.category.storage.CategoryRepository;
+import teamfive.event.storage.EventRepository;
 import teamfive.exception.ConflictException;
 import teamfive.exception.DuplicatedException;
 import teamfive.exception.NotFoundException;
-import teamfive.event.storage.EventRepository;
 
 import java.util.List;
 import java.util.stream.Collectors;

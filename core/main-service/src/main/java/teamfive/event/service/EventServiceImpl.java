@@ -19,8 +19,8 @@ import teamfive.event.dto.EventShortDto;
 import teamfive.event.dto.EventUpdateRequestDto;
 import teamfive.event.mapper.EventMapper;
 import teamfive.event.model.Event;
-import teamfive.event.model.EventState;
 import teamfive.event.model.EventLocation;
+import teamfive.event.model.EventState;
 import teamfive.event.storage.EventRepository;
 import teamfive.exception.ConflictException;
 import teamfive.exception.NotFoundException;
@@ -28,10 +28,10 @@ import teamfive.exception.ValidationException;
 import teamfive.request.model.ParticipationRequest;
 import teamfive.request.repository.RequestRepository;
 
-
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.*;
+import java.util.Collections;
+import java.util.List;
 import java.util.stream.Collectors;
 
 @Slf4j
