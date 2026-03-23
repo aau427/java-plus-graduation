@@ -1,7 +1,12 @@
 stats-server-url: http://localhost:9090
 
 server:
-  port: 8080
+  port: 0
+
+eureka:
+  instance:
+    instance-id: ${spring.application.name}:${random.value}
+    prefer-ip-address: true
 logging:
   level:
     root: INFO
