@@ -1,23 +1,21 @@
-server:
-  port: 9090
-
-logging:
-  level:
-    root: INFO
-
 spring:
-  sql:
-    init:
-      # Всегда выполнять скрипты при старте
-      mode: always
+  application:
+    name: stats-server
 
-  jpa:
-    database-platform: org.hibernate.dialect.PostgreSQLDialect
-    hibernate:
-      ddl-auto: none
+  config:
+    import: "configserver:"
+  cloud:
+    config:
+      discovery:
+        enabled: true
+        serviceId: config-server
+      fail-fast: true
+      retry:
+        useRandomPolicy: true
+        max-interval: 10000
 
-  datasource:
-    driver-class-name: org.postgresql.Driver
-    url: jdbc:postgresql://localhost:5431/stats-db
-    username: user
-    password: user
+eureka:
+  client:
+    serviceUrl:
+      defaultZone: http://localhost:8761/eureka/
+    registerWithEureka: true
