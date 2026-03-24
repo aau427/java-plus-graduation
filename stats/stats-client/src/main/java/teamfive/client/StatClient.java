@@ -15,6 +15,7 @@ import org.springframework.retry.policy.MaxAttemptsRetryPolicy;
 import org.springframework.retry.support.RetryTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
+import org.springframework.web.util.UriComponentsBuilder;
 
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
@@ -60,7 +61,6 @@ public class StatClient {
             log.warn("StatClient - CTAT");
 
             URI uri = makeUri("/hit");
-            System.out.println(uri);
 
             restClient.post().uri(uri)
                     .contentType(MediaType.APPLICATION_JSON)
@@ -84,15 +84,16 @@ public class StatClient {
             String startFormatted = paramRequest.getStart().format(formatter);
             String endFormatted = paramRequest.getEnd().format(formatter);
 
-            String finalUrl = String.format("%s/stats?start=%s&end=%s&unique=%s",
-                    baseUrl, startFormatted, endFormatted, paramRequest.getUnique());
+            UriComponentsBuilder builder = UriComponentsBuilder.fromUri(makeUri("/stats"))
+                    .queryParam("start", paramRequest.getStart().format(formatter))
+                    .queryParam("end", paramRequest.getEnd().format(formatter))
+                    .queryParam("unique", paramRequest.getUnique());
 
             if (paramRequest.getUris() != null && !paramRequest.getUris().isEmpty()) {
-                for (String uri : paramRequest.getUris()) {
-                    finalUrl += "&uris=" + uri;
-                }
+                builder.queryParam("uris", paramRequest.getUris());
             }
 
+            String finalUrl = builder.build().toUriString();
             log.info("Final URL: {}", finalUrl);
 
             return restClient.get()
