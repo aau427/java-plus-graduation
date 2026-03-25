@@ -14,6 +14,8 @@
 
     <modules>
         <module>main-service</module>
+        <module>common-api</module>
+        <module>user-service</module>
     </modules>
 
 

@@ -3,7 +3,6 @@ package teamfive.event.model;
 import jakarta.persistence.*;
 import lombok.*;
 import teamfive.category.model.Category;
-import teamfive.user.model.User;
 
 import java.time.LocalDateTime;
 
@@ -38,9 +37,8 @@ public class Event {
     @Column(name = "event_date", nullable = false)
     private LocalDateTime eventDate;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "initiator_id", nullable = false)
-    private User initiator;
+    @Column(name = "initiator_id", nullable = false)
+    private Long initiatorId;
 
     @Embedded
     private EventLocation location;

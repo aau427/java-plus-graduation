@@ -5,6 +5,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataAccessException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import teamfive.dto.UserDto;
 import teamfive.event.dto.EventRequestStatusUpdateRequest;
 import teamfive.event.dto.EventResponseDto;
 import teamfive.event.model.Event;
@@ -14,17 +15,17 @@ import teamfive.event.storage.EventRepository;
 import teamfive.exception.ConflictException;
 import teamfive.exception.DuplicatedException;
 import teamfive.exception.NotFoundException;
+import teamfive.feignclient.UserServiceClient;
 import teamfive.request.dto.EventRequestStatusUpdateResult;
 import teamfive.request.dto.ParticipationRequestDto;
 import teamfive.request.enums.RequestStatus;
 import teamfive.request.mapper.RequestMapper;
 import teamfive.request.model.ParticipationRequest;
 import teamfive.request.repository.RequestRepository;
-import teamfive.user.dto.UserDto;
-import teamfive.user.service.UserService;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -34,7 +35,7 @@ import java.util.stream.Collectors;
 public class RequestServiceImpl implements RequestService {
 
     private final RequestRepository repository;
-    private final UserService userService;
+    private final UserServiceClient userClient;
     private final RequestMapper mapper;
     private final EventService eventService;
     private final EventRepository eventRepository;
@@ -47,10 +48,10 @@ public class RequestServiceImpl implements RequestService {
                 userId, eventId, event.getState(), event.getParticipantLimit());
 
         try {
-            UserDto user = userService.get(userId);
-            if (user == null) {
-                throw new NotFoundException("Пользователь с id=" + userId + " не найден");
-            }
+            UserDto user = userClient.getByIds(List.of(userId))
+                    .stream()
+                    .findFirst()
+                    .orElseThrow(() -> new NotFoundException("User not found with id: " + userId));
 
             if (repository.findByEventIdAndRequesterId(eventId, userId).isPresent()) {
                 throw new DuplicatedException("Такая заявка уже создана");
@@ -131,7 +132,11 @@ public class RequestServiceImpl implements RequestService {
         try {
             log.info("Получение заявок пользователя: userId={}", userId);
 
-            UserDto user = userService.get(userId);
+            UserDto user = userClient.getByIds(List.of(userId))
+                    .stream()
+                    .findFirst()
+                    .orElseThrow(() -> new NotFoundException("User not found with id: " + userId));
+
             if (user == null) {
                 throw new NotFoundException("Пользователь с id=" + userId + " не найден");
             }
@@ -203,12 +208,10 @@ public class RequestServiceImpl implements RequestService {
         try {
             List<ParticipationRequest> requests = repository.findAllByEventId(eventId);
             log.debug("Найдено запросов для события {}: {}", eventId, requests.size());
-            List<ParticipationRequestDto> result = requests.stream()
+            return requests.stream()
                     .map(mapper::toDtoSafe)
-                    .filter(dto -> dto != null)
+                    .filter(Objects::nonNull)
                     .collect(Collectors.toList());
-
-            return result;
 
         } catch (DataAccessException e) {
             log.error("Ошибка доступа к данным при получении запросов для события {}: {}", eventId, e.getMessage(), e);
@@ -283,7 +286,7 @@ public class RequestServiceImpl implements RequestService {
 
         List<ParticipationRequestDto> updatedDtos = updatedRequests.stream()
                 .map(mapper::toDto)
-                .collect(Collectors.toList());
+                .toList();
 
         List<ParticipationRequestDto> confirmedRequests = updatedDtos.stream()
                 .filter(dto -> RequestStatus.CONFIRMED.toString().equals(dto.getStatus()))

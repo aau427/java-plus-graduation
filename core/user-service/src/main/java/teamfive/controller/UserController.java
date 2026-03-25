@@ -1,9 +1,8 @@
-package teamfive.user.controller;
+package teamfive.controller;
 
 
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Positive;
-import jakarta.validation.constraints.PositiveOrZero;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.PageRequest;
@@ -11,10 +10,11 @@ import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
-import teamfive.user.dto.UserDto;
-import teamfive.user.dto.UserRequestDto;
-import teamfive.user.dto.UserUpdateDto;
-import teamfive.user.service.UserService;
+import teamfive.dto.UserDto;
+import teamfive.dto.UserRequestDto;
+import teamfive.dto.UserUpdateDto;
+import teamfive.feignclient.UserOperations;
+import teamfive.service.UserService;
 
 import java.util.List;
 
@@ -24,14 +24,18 @@ import java.util.List;
 @RequiredArgsConstructor
 @RequestMapping(path = "/admin/users")
 @Validated
-public class UserController {
+public class UserController implements UserOperations {
     private final UserService userService;
 
+    @Override
     @GetMapping
     @ResponseStatus(HttpStatus.OK)
     public List<UserDto> get(@RequestParam(required = false) List<Long> ids,
-                             @RequestParam(defaultValue = "0") @PositiveOrZero Integer from,
-                             @RequestParam(defaultValue = "10") @Positive Integer size) {
+                             /* валидация параметров определена на уровне интерфейса
+                                лично неизвестная мне Барбара Лисков за это топит активно:)
+                              */
+                             @RequestParam(defaultValue = "0") Integer from,
+                             @RequestParam(defaultValue = "10") Integer size) {
 
         log.info("GET: Получение пользователей с параметрами: ids={}, from={}, size={}", ids, from, size);
 

@@ -1,4 +1,4 @@
-package teamfive.user.dto;
+package teamfive.dto;
 
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotNull;

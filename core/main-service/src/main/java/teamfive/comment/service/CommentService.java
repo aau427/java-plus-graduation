@@ -10,15 +10,14 @@ import teamfive.comment.dto.UpdateCommentDto;
 import teamfive.comment.mapper.CommentMapper;
 import teamfive.comment.model.Comment;
 import teamfive.comment.repository.CommentRepository;
+import teamfive.dto.UserDto;
 import teamfive.event.dto.EventResponseDto;
 import teamfive.event.model.Event;
 import teamfive.event.model.EventState;
 import teamfive.event.service.EventService;
 import teamfive.exception.ConflictException;
 import teamfive.exception.NotFoundException;
-import teamfive.user.dto.UserDto;
-import teamfive.user.model.User;
-import teamfive.user.service.UserService;
+import teamfive.feignclient.UserServiceClient;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -30,12 +29,13 @@ import java.util.List;
 public class CommentService {
     private final CommentRepository repository;
     private final EventService eventService;
-    private final UserService userService;
+    private final UserServiceClient userClient;
     private final CommentMapper mapper;
 
     @Transactional
     public CommentDto create(Long userId, InputCommentDto commentDto) {
-        UserDto user = userService.get(userId);
+        UserDto user = getUserDtoOrTrow(userId);
+
         EventResponseDto event = eventService.getEventById(commentDto.getEventId());
 
         validateEventState(event);
@@ -57,7 +57,7 @@ public class CommentService {
     public void deleteForOwner(Long userId, Long commentId) {
         Comment comment = findCommentById(commentId);
 
-        if (!comment.getUser().getId().equals(userId)) {
+        if (!comment.getUserId().equals(userId)) {
             throw new ConflictException("Удаление невозможно. Обратитесь к администратору или владельцу");
         }
 
@@ -80,7 +80,8 @@ public class CommentService {
     }
 
     public List<CommentDto> getAllForUser(Long userId) {
-        UserDto user = userService.get(userId);
+        UserDto user = getUserDtoOrTrow(userId);
+
         return repository.getAllByUserId(userId)
                 .stream()
                 .map(mapper::toCommentDto)
@@ -115,14 +116,12 @@ public class CommentService {
     }
 
     private Comment buildComment(UserDto user, EventResponseDto event, String text) {
-        User relatedUser = new User();
-        relatedUser.setId(user.getId());
 
         Event relatedEvent = new Event();
         relatedEvent.setId(event.getId());
 
         Comment comment = new Comment();
-        comment.setUser(relatedUser);
+        comment.setUserId(user.getId());
         comment.setEvent(relatedEvent);
         comment.setText(text);
         comment.setCreated(LocalDateTime.now());
@@ -136,8 +135,15 @@ public class CommentService {
     }
 
     private void validateCommentOwnership(Long userId, Comment comment) {
-        if (!comment.getUser().getId().equals(userId)) {
+        if (!comment.getUserId().equals(userId)) {
             throw new ConflictException("Обновлять комментарий может только автор!");
         }
+    }
+
+    private UserDto getUserDtoOrTrow(Long userId) {
+        return userClient.getByIds(List.of(userId))
+                .stream()
+                .findFirst()
+                .orElseThrow(() -> new NotFoundException("User not found with id: " + userId));
     }
 }

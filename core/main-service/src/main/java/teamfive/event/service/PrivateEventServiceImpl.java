@@ -10,6 +10,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import teamfive.category.model.Category;
 import teamfive.category.storage.CategoryRepository;
+import teamfive.dto.UserDto;
 import teamfive.event.dto.EventRequestDto;
 import teamfive.event.dto.EventResponseDto;
 import teamfive.event.dto.EventShortDto;
@@ -21,8 +22,7 @@ import teamfive.event.model.EventState;
 import teamfive.event.storage.EventRepository;
 import teamfive.exception.ConflictException;
 import teamfive.exception.NotFoundException;
-import teamfive.user.model.User;
-import teamfive.user.repository.UserRepository;
+import teamfive.feignclient.UserServiceClient;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -33,9 +33,8 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class PrivateEventServiceImpl implements PrivateEventService {
-
     private final EventRepository eventRepository;
-    private final UserRepository userRepository;
+    private final UserServiceClient userClient;
     private final CategoryRepository categoryRepository;
     private final EventMapper eventMapper;
 
@@ -44,8 +43,7 @@ public class PrivateEventServiceImpl implements PrivateEventService {
     public EventResponseDto createEvent(Long userId, EventRequestDto eventRequestDto) {
         log.info("Создание события пользователем: userId={}, title={}", userId, eventRequestDto.getTitle());
 
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new NotFoundException("Пользователь с id=" + userId + " не найден"));
+        UserDto user = getUserDtoOrThrow(userId);
 
         Category category = categoryRepository.findById(eventRequestDto.getCategory())
                 .orElseThrow(() -> new NotFoundException("Категория с id=" + eventRequestDto.getCategory() + " не найдена"));
@@ -58,17 +56,12 @@ public class PrivateEventServiceImpl implements PrivateEventService {
             throw new java.lang.IllegalArgumentException("Лимит участников не может быть отрицательным");
         }
 
-        Integer participantLimit = eventRequestDto.getParticipantLimit() != null ?
-                eventRequestDto.getParticipantLimit() : 0;
-        Boolean requestModeration = eventRequestDto.getRequestModeration() != null ?
-                eventRequestDto.getRequestModeration() : true;
-
         Event event = Event.builder()
                 .annotation(eventRequestDto.getAnnotation())
                 .category(category)
                 .description(eventRequestDto.getDescription())
                 .eventDate(eventRequestDto.getEventDate())
-                .initiator(user)
+                .initiatorId(user.getId())
                 .location(new EventLocation(
                         eventRequestDto.getLocation().getLat(),
                         eventRequestDto.getLocation().getLon()
@@ -95,9 +88,7 @@ public class PrivateEventServiceImpl implements PrivateEventService {
 
         validatePaginationParams(from, size);
 
-        if (!userRepository.existsById(userId)) {
-            throw new NotFoundException("Пользователь с id=" + userId + " не найден");
-        }
+        UserDto user = getUserDtoOrThrow(userId);
 
         int page = from / size;
         Pageable pageable = PageRequest.of(page, size, Sort.by("id").descending());
@@ -200,5 +191,12 @@ public class PrivateEventServiceImpl implements PrivateEventService {
         if (from < 0) {
             throw new java.lang.IllegalArgumentException("From must be non-negative");
         }
+    }
+
+    private UserDto getUserDtoOrThrow(Long userId) {
+        return userClient.getByIds(List.of(userId))
+                .stream()
+                .findFirst()
+                .orElseThrow(() -> new NotFoundException("Пользователь не найден. Id: " + userId));
     }
 }

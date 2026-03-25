@@ -62,7 +62,7 @@ public class EventServiceImpl implements EventService {
 
         if (users != null && !users.isEmpty()) {
             spec = spec.and((root, query, cb) ->
-                    root.get("initiator").get("id").in(users));
+                    root.get("initiatorId").in(users));
         }
 
         if (states != null && !states.isEmpty()) {

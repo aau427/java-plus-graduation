@@ -1,10 +1,10 @@
-package teamfive.user.repository;
+package teamfive.repository;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.lang.NonNull;
-import teamfive.user.model.User;
+import teamfive.model.User;
 
 import java.util.List;
 

@@ -1,4 +1,4 @@
-package teamfive.user.dto;
+package teamfive.dto;
 
 import lombok.Getter;
 import lombok.Setter;

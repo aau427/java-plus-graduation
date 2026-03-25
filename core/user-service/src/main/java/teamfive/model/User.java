@@ -1,4 +1,4 @@
-package teamfive.user.model;
+package teamfive.model;
 
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Email;

@@ -10,7 +10,7 @@ import teamfive.comment.model.Comment;
 public interface CommentMapper {
 
     @Mappings({
-            @Mapping(source = "user.id", target = "userId"),
+            @Mapping(source = "userId", target = "userId"),
             @Mapping(source = "event.id", target = "eventId")
     })
     CommentDto toCommentDto(Comment comment);

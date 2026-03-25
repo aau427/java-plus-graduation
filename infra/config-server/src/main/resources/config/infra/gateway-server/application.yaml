@@ -4,6 +4,11 @@ spring:
   cloud:
     gateway:
       routes:
+        # user-service
+        - id: user_service_route
+          uri: lb://user-service
+          predicates:
+            - Path=/admin/users/**
         # main-service
         - id: main_service_route
           uri: lb://main-service

@@ -13,6 +13,6 @@ public interface CommentRepository extends JpaRepository<Comment, Long> {
     @Query("SELECT c FROM Comment c WHERE c.event.id = :eventId ORDER BY c.id DESC")
     List<Comment> getAllByEventId(@Param("eventId") Long eventId);
 
-    @Query("SELECT c FROM Comment c WHERE c.user.id = :userId order by c.id DESC")
+    @Query("SELECT c FROM Comment c WHERE c.userId = :userId order by c.id DESC")
     List<Comment> getAllByUserId(@Param("userId") Long userId);
 }
