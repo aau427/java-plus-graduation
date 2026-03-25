@@ -5,12 +5,19 @@ import dto.StatDto;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.cloud.client.ServiceInstance;
+import org.springframework.cloud.client.discovery.DiscoveryClient;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
+import org.springframework.retry.backoff.FixedBackOffPolicy;
+import org.springframework.retry.policy.MaxAttemptsRetryPolicy;
+import org.springframework.retry.support.RetryTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
+import org.springframework.web.util.UriComponentsBuilder;
 
+import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -19,16 +26,29 @@ import java.util.List;
 @Slf4j
 @Service
 public class StatClient {
-    private final String serverUrl;
     private final String appName;
     private final RestClient restClient;
+    private final DiscoveryClient discoveryClient;
+    private final RetryTemplate retryTemplate;
+    private final String statsServiceId;
 
     public StatClient(RestClient restClient,
-                      @Value("${stats-server-url}") String serverUrl,
-                      @Value("${app-name}") String appName) {
+                      DiscoveryClient discoveryClient,
+                      @Value("${stats-service-id:stats-server}") String statsServiceId,
+                      @Value("${app-name:ewm-service}") String appName) {
         this.restClient = restClient;
-        this.serverUrl = serverUrl;
         this.appName = appName;
+        this.discoveryClient = discoveryClient;
+        this.statsServiceId = statsServiceId;
+        //настройка Retry
+        this.retryTemplate = new RetryTemplate();
+        FixedBackOffPolicy fixedBackOffPolicy = new FixedBackOffPolicy();
+        fixedBackOffPolicy.setBackOffPeriod(3000L);
+        retryTemplate.setBackOffPolicy(fixedBackOffPolicy);
+
+        MaxAttemptsRetryPolicy retryPolicy = new MaxAttemptsRetryPolicy();
+        retryPolicy.setMaxAttempts(3);
+        retryTemplate.setRetryPolicy(retryPolicy);
     }
 
     public void hit(HttpServletRequest request) {
@@ -40,7 +60,9 @@ public class StatClient {
             hitDto.setTimestamp(LocalDateTime.now());
             log.warn("StatClient - CTAT");
 
-            restClient.post().uri(serverUrl + "/hit")
+            URI uri = makeUri("/hit");
+
+            restClient.post().uri(uri)
                     .contentType(MediaType.APPLICATION_JSON)
                     .body(hitDto)
                     .retrieve()
@@ -56,21 +78,22 @@ public class StatClient {
             log.info("Получение статистики с параметрами: start={}, end={}, uris={}, unique={}",
                     paramRequest.getStart(), paramRequest.getEnd(), paramRequest.getUris(), paramRequest.getUnique());
 
-            String baseUrl = serverUrl;
+            String baseUrl = makeUri("").toString();
 
             DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
             String startFormatted = paramRequest.getStart().format(formatter);
             String endFormatted = paramRequest.getEnd().format(formatter);
 
-            String finalUrl = String.format("%s/stats?start=%s&end=%s&unique=%s",
-                    baseUrl, startFormatted, endFormatted, paramRequest.getUnique());
+            UriComponentsBuilder builder = UriComponentsBuilder.fromUri(makeUri("/stats"))
+                    .queryParam("start", paramRequest.getStart().format(formatter))
+                    .queryParam("end", paramRequest.getEnd().format(formatter))
+                    .queryParam("unique", paramRequest.getUnique());
 
             if (paramRequest.getUris() != null && !paramRequest.getUris().isEmpty()) {
-                for (String uri : paramRequest.getUris()) {
-                    finalUrl += "&uris=" + uri;
-                }
+                builder.queryParam("uris", paramRequest.getUris());
             }
 
+            String finalUrl = builder.build().toUriString();
             log.info("Final URL: {}", finalUrl);
 
             return restClient.get()
@@ -102,5 +125,23 @@ public class StatClient {
             return xForwardedForHeader.split(",")[0].trim();
         }
         return request.getRemoteAddr();
+    }
+
+    private ServiceInstance getInstance() {
+        try {
+            return discoveryClient
+                    .getInstances(statsServiceId)
+                    .getFirst();
+        } catch (Exception exception) {
+            throw new StatsServerUnavailable(
+                    "Ошибка обнаружения адреса сервиса статистики с id: " + statsServiceId,
+                    exception
+            );
+        }
+    }
+
+    private URI makeUri(String path) {
+        ServiceInstance instance = retryTemplate.execute(cxt -> getInstance());
+        return URI.create("http://" + instance.getHost() + ":" + instance.getPort() + path);
     }
 }
