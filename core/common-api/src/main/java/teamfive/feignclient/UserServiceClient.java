@@ -1,7 +1,7 @@
 package teamfive.feignclient;
 
 import org.springframework.cloud.openfeign.FeignClient;
-import teamfive.dto.UserDto;
+import teamfive.dto.user.UserDto;
 
 import java.util.List;
 

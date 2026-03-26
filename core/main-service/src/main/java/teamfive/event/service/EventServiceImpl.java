@@ -14,19 +14,19 @@ import teamfive.category.model.Category;
 import teamfive.category.storage.CategoryRepository;
 import teamfive.client.ParamRequest;
 import teamfive.client.StatClient;
-import teamfive.event.dto.EventResponseDto;
-import teamfive.event.dto.EventShortDto;
-import teamfive.event.dto.EventUpdateRequestDto;
+import teamfive.dto.event.EventInternalDto;
+import teamfive.dto.event.EventResponseDto;
+import teamfive.dto.event.EventShortDto;
+import teamfive.dto.event.EventUpdateRequestDto;
+import teamfive.enums.EventState;
 import teamfive.event.mapper.EventMapper;
 import teamfive.event.model.Event;
 import teamfive.event.model.EventLocation;
-import teamfive.event.model.EventState;
 import teamfive.event.storage.EventRepository;
+import teamfive.event.view.EventInternalView;
 import teamfive.exception.ConflictException;
 import teamfive.exception.NotFoundException;
 import teamfive.exception.ValidationException;
-import teamfive.request.model.ParticipationRequest;
-import teamfive.request.repository.RequestRepository;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -43,7 +43,6 @@ public class EventServiceImpl implements EventService {
     private final EventRepository eventRepository;
     private final CategoryRepository categoryRepository;
     private final EventMapper eventMapper;
-    private final RequestRepository requestRepository;
     private final StatClient client;
 
     private static final DateTimeFormatter FORMATTER = DateTimeFormatter.ISO_DATE_TIME;
@@ -239,25 +238,34 @@ public class EventServiceImpl implements EventService {
             throw new NotFoundException("Событие с id=" + id + " не найдено");
         }
 
-        if (event.getPublishedOn() == null) {
-            log.warn("Событие {} опубликовано, но publishedOn is null", id);
-            event.setPublishedOn(LocalDateTime.now().minusDays(1));
-        }
-
         Long viewsFromStats = getViewsClient(event);
         log.info("Просмотры из статистики: {}", viewsFromStats);
 
         event.setViews(viewsFromStats);
 
-        List<ParticipationRequest> requests = requestRepository.findAllByEventId(id);
-        int confirmedCount = (int) requests.stream()
-                .filter(request -> "CONFIRMED".equals(request.getStatus()))
-                .count();
+        return eventMapper.toEventResponseDto(event);
+    }
 
-        EventResponseDto responseDto = eventMapper.toEventResponseDto(event);
-        responseDto.setConfirmedRequests(confirmedCount);
+    @Override
+    public EventInternalDto getEventInternalById(Long id) {
+        log.info("Получение внутренней информации о событии id={}", id);
 
-        return responseDto;
+        EventInternalView view = eventRepository.findProjectedById(id)
+                .orElseThrow(() -> new NotFoundException("Событие не найдено"));
+
+        return eventMapper.toInternalDto(view);
+    }
+
+    @Override
+    @Transactional
+    public void incrementConfirmedRequests(Long eventId, Integer count) {
+        log.info("Internal update: увеличение подтвержденных заявок события {} на {}", eventId, count);
+
+        if (!eventRepository.existsById(eventId)) {
+            throw new NotFoundException("Событие с id=" + eventId + " не найдено");
+        }
+
+        eventRepository.incrementConfirmedRequests(eventId, count);
     }
 
     private Long getViewsClient(Event event) {
@@ -291,26 +299,6 @@ public class EventServiceImpl implements EventService {
         }
     }
 
-    @Override
-    public EventResponseDto getEventByIdForInternalUse(Long id) {
-        log.info("Получение события по id для внутреннего использования: {}", id);
-
-        Event event = eventRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException("Событие с id=" + id + " не найдено"));
-
-        List<ParticipationRequest> requests = requestRepository.findAllByEventId(id);
-        int confirmedCount = 0;
-        for (ParticipationRequest request : requests) {
-            if ("CONFIRMED".equals(request.getStatus())) {
-                confirmedCount++;
-            }
-        }
-
-        EventResponseDto responseDto = eventMapper.toEventResponseDto(event);
-        responseDto.setConfirmedRequests(confirmedCount);
-
-        return responseDto;
-    }
 
     private Pageable createPageable(String sort, int from, int size) {
         validatePaginationParams(from, size);

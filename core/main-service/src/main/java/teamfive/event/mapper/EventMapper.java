@@ -5,11 +5,13 @@ import org.mapstruct.Mapping;
 import org.mapstruct.Named;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
-import teamfive.dto.UserDto;
-import teamfive.event.dto.EventResponseDto;
-import teamfive.event.dto.EventShortDto;
+import teamfive.dto.event.EventInternalDto;
+import teamfive.dto.event.EventResponseDto;
+import teamfive.dto.event.EventShortDto;
+import teamfive.dto.user.UserDto;
+import teamfive.enums.EventState;
 import teamfive.event.model.Event;
-import teamfive.event.model.EventState;
+import teamfive.event.view.EventInternalView;
 import teamfive.feignclient.UserServiceClient;
 
 import java.util.List;
@@ -28,6 +30,8 @@ public abstract class EventMapper {
     @Mapping(target = "category", source = "category")
     @Mapping(target = "initiator", source = "initiatorId", qualifiedByName = "fetchUser")
     public abstract EventShortDto toEventShortDto(Event event);
+
+    public abstract EventInternalDto toInternalDto(EventInternalView view);
 
 
     @Named("fetchUser")

@@ -1,7 +1,7 @@
 package teamfive.compilation.dto;
 
 import lombok.Data;
-import teamfive.event.dto.EventShortDto;
+import teamfive.dto.event.EventShortDto;
 
 import java.util.Set;
 

@@ -2,10 +2,10 @@ package teamfive.category.mapper;
 
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
-import teamfive.category.dto.InputCategoryDto;
-import teamfive.category.dto.OutputCategoryDto;
-import teamfive.category.dto.UpdateCategoryDto;
 import teamfive.category.model.Category;
+import teamfive.dto.category.InputCategoryDto;
+import teamfive.dto.category.OutputCategoryDto;
+import teamfive.dto.category.UpdateCategoryDto;
 
 @Mapper(componentModel = "spring")
 public interface SimpleCategoryMapper {

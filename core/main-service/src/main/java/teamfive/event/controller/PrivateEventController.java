@@ -5,10 +5,10 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
-import teamfive.event.dto.EventRequestDto;
-import teamfive.event.dto.EventResponseDto;
-import teamfive.event.dto.EventShortDto;
-import teamfive.event.dto.EventUpdateRequestDto;
+import teamfive.dto.event.EventRequestDto;
+import teamfive.dto.event.EventResponseDto;
+import teamfive.dto.event.EventShortDto;
+import teamfive.dto.event.EventUpdateRequestDto;
 import teamfive.event.service.PrivateEventService;
 
 import java.util.List;

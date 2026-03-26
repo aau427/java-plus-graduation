@@ -10,9 +10,9 @@ import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
-import teamfive.dto.UserDto;
-import teamfive.dto.UserRequestDto;
-import teamfive.dto.UserUpdateDto;
+import teamfive.dto.user.UserDto;
+import teamfive.dto.user.UserRequestDto;
+import teamfive.dto.user.UserUpdateDto;
 import teamfive.feignclient.UserOperations;
 import teamfive.service.UserService;
 

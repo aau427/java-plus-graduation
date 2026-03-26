@@ -8,8 +8,9 @@ import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
+import teamfive.enums.EventState;
 import teamfive.event.model.Event;
-import teamfive.event.model.EventState;
+import teamfive.event.view.EventInternalView;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -39,4 +40,12 @@ public interface EventRepository extends JpaRepository<Event, Long>, JpaSpecific
     @Modifying
     @Query("UPDATE Event e SET e.views = COALESCE(e.views, 0) + 1 WHERE e.id IN :eventIds")
     void incrementViewsBatch(@Param("eventIds") List<Long> eventIds);
+
+    Optional<EventInternalView> findProjectedById(Long id);
+
+    @Modifying
+    @Query("UPDATE Event e " +
+            "SET e.confirmedRequests = COALESCE(e.confirmedRequests, 0) + :count " +
+            "WHERE e.id = :eventId")
+    void incrementConfirmedRequests(@Param("eventId") Long eventId, @Param("count") Integer count);
 }

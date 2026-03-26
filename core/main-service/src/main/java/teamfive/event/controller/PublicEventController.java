@@ -5,8 +5,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
 import teamfive.client.StatClient;
-import teamfive.event.dto.EventResponseDto;
-import teamfive.event.dto.EventShortDto;
+import teamfive.dto.event.EventResponseDto;
+import teamfive.dto.event.EventShortDto;
 import teamfive.event.service.EventService;
 
 import java.util.List;

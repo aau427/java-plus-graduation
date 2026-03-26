@@ -1,9 +1,9 @@
 package teamfive.event.service;
 
-import teamfive.event.dto.EventRequestDto;
-import teamfive.event.dto.EventResponseDto;
-import teamfive.event.dto.EventShortDto;
-import teamfive.event.dto.EventUpdateRequestDto;
+import teamfive.dto.event.EventRequestDto;
+import teamfive.dto.event.EventResponseDto;
+import teamfive.dto.event.EventShortDto;
+import teamfive.dto.event.EventUpdateRequestDto;
 
 import java.util.List;
 

@@ -32,3 +32,14 @@ services:
     ports:
       - "5433:5432"
 
+  request-db:
+    image: postgres:16.1
+    container_name: request-db
+    restart: always
+    environment:
+      - POSTGRES_DB=request-db
+      - POSTGRES_USER=user
+      - POSTGRES_PASSWORD=user
+    ports:
+      - "5434:5432"
+

@@ -3,8 +3,8 @@ package teamfive.category.controller;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
-import teamfive.category.dto.OutputCategoryDto;
 import teamfive.category.service.CategoryService;
+import teamfive.dto.category.OutputCategoryDto;
 
 import java.util.List;
 

@@ -1,8 +1,8 @@
 package teamfive.category.service;
 
-import teamfive.category.dto.InputCategoryDto;
-import teamfive.category.dto.OutputCategoryDto;
-import teamfive.category.dto.UpdateCategoryDto;
+import teamfive.dto.category.InputCategoryDto;
+import teamfive.dto.category.OutputCategoryDto;
+import teamfive.dto.category.UpdateCategoryDto;
 
 import java.util.List;
 

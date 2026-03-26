@@ -4,6 +4,12 @@ spring:
   cloud:
     gateway:
       routes:
+        # request-service
+        - id: request_service_route
+          uri: lb://request-service
+          predicates:
+            - Path=/users/*/requests/**, /users/*/events/*/requests/**
+
         # user-service
         - id: user_service_route
           uri: lb://user-service

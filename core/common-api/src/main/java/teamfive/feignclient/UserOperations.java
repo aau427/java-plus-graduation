@@ -4,7 +4,7 @@ import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.PositiveOrZero;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
-import teamfive.dto.UserDto;
+import teamfive.dto.user.UserDto;
 
 import java.util.List;
 

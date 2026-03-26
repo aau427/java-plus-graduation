@@ -3,6 +3,7 @@ package teamfive.event.model;
 import jakarta.persistence.*;
 import lombok.*;
 import teamfive.category.model.Category;
+import teamfive.enums.EventState;
 
 import java.time.LocalDateTime;
 

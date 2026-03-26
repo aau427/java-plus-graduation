@@ -1,8 +1,9 @@
 package teamfive.event.service;
 
-import teamfive.event.dto.EventResponseDto;
-import teamfive.event.dto.EventShortDto;
-import teamfive.event.dto.EventUpdateRequestDto;
+import teamfive.dto.event.EventInternalDto;
+import teamfive.dto.event.EventResponseDto;
+import teamfive.dto.event.EventShortDto;
+import teamfive.dto.event.EventUpdateRequestDto;
 
 import java.util.List;
 
@@ -21,6 +22,7 @@ public interface EventService {
 
     EventResponseDto getEventById(Long id);
 
-    EventResponseDto getEventByIdForInternalUse(Long id);
+    EventInternalDto getEventInternalById(Long id);
 
+    void incrementConfirmedRequests(Long eventId, Integer count);
 }
