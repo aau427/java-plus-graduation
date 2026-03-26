@@ -2,6 +2,7 @@ package teamfive.model;
 
 import jakarta.persistence.*;
 import lombok.*;
+import teamfive.enums.RequestStatus;
 
 import java.time.LocalDateTime;
 
@@ -22,7 +23,8 @@ public class ParticipationRequest {
     private LocalDateTime created;
 
     @Column(name = "status", nullable = false)
-    private String status;
+    @Enumerated(EnumType.STRING)
+    private RequestStatus status;
 
     @Column(name = "event_id", nullable = false)
     private Long eventId;

@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonFormat;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
 import lombok.*;
+import teamfive.enums.RequestStatus;
 
 import java.time.LocalDateTime;
 
@@ -26,5 +27,5 @@ public class ParticipationRequestDto {
     private Long requester;
 
     @NotNull(message = "Status cannot be null")
-    private String status;
+    private RequestStatus status;
 }

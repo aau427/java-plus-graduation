@@ -1,6 +1,7 @@
 package teamfive.repository;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+import teamfive.enums.RequestStatus;
 import teamfive.model.ParticipationRequest;
 
 import java.util.List;
@@ -10,7 +11,7 @@ public interface RequestRepository extends JpaRepository<ParticipationRequest, L
 
     Optional<ParticipationRequest> findByEventIdAndRequesterId(Long eventId, Long userId);
 
-    List<ParticipationRequest> findAllByEventIdAndStatus(Long eventId, String status);
+    List<ParticipationRequest> findAllByEventIdAndStatus(Long eventId, RequestStatus status);
 
     List<ParticipationRequest> findAllByRequesterId(Long requesterId);
 

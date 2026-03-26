@@ -70,7 +70,7 @@ public class RequestServiceImpl implements RequestService {
             int participantLimit = event.getParticipantLimit() != null ? event.getParticipantLimit() : 0;
             boolean requestModeration = event.getRequestModeration() != null ? event.getRequestModeration() : true;
 
-            int confirmedCount = repository.findAllByEventIdAndStatus(eventId, RequestStatus.CONFIRMED.toString()).size();
+            int confirmedCount = repository.findAllByEventIdAndStatus(eventId, RequestStatus.CONFIRMED).size();
 
             RequestStatus status;
 
@@ -101,7 +101,7 @@ public class RequestServiceImpl implements RequestService {
             ParticipationRequest request = ParticipationRequest.builder()
                     .requesterId(userId)
                     .eventId(eventId)
-                    .status(status.toString())
+                    .status(status)
                     .created(LocalDateTime.now())
                     .build();
 
@@ -170,8 +170,8 @@ public class RequestServiceImpl implements RequestService {
                 throw new ConflictException("Пользователь, который не является автором заявки, не может её отменить.");
             }
 
-            String currentStatus = request.getStatus();
-            if (RequestStatus.CANCELED.toString().equals(currentStatus)) {
+            RequestStatus currentStatus = request.getStatus();
+            if (RequestStatus.CANCELED.equals(currentStatus)) {
                 log.info("Заявка {} уже отменена", requestId);
                 return mapper.toDtoSafe(request);
             }
@@ -179,7 +179,7 @@ public class RequestServiceImpl implements RequestService {
             log.info("Статус заявки изменен: requestId={}, oldStatus={}, newStatus=CANCELED",
                     requestId, currentStatus);
 
-            request.setStatus(RequestStatus.CANCELED.toString());
+            request.setStatus(RequestStatus.CANCELED);
             ParticipationRequest updatedRequest = repository.save(request);
             log.info("Статус заявки изменен: requestId={}, oldStatus={}, newStatus=CANCELED",
                     requestId, currentStatus);
@@ -236,7 +236,7 @@ public class RequestServiceImpl implements RequestService {
         int currentConfirmed = event.getConfirmedRequests() != null ? event.getConfirmedRequests() : 0;
         int participantLimit = event.getParticipantLimit() != null ? event.getParticipantLimit() : 0;
 
-        if (RequestStatus.CONFIRMED.toString().equals(updateRequest.getStatus()) && participantLimit > 0) {
+        if (RequestStatus.CONFIRMED.equals(updateRequest.getStatus()) && participantLimit > 0) {
             int requestsToConfirm = updateRequest.getRequestIds().size();
 
             if (currentConfirmed + requestsToConfirm > participantLimit) {
@@ -255,13 +255,13 @@ public class RequestServiceImpl implements RequestService {
             if (!request.getEventId().equals(eventId)) {
                 throw new ConflictException("Запрос не принадлежит указанному событию");
             }
-            if (!RequestStatus.PENDING.toString().equals(request.getStatus())) {
+            if (!RequestStatus.PENDING.equals(request.getStatus())) {
                 throw new ConflictException("Можно изменять только запросы в статусе PENDING");
             }
             request.setStatus(updateRequest.getStatus());
         });
 
-        int newlyConfirmed = RequestStatus.CONFIRMED.toString().equals(updateRequest.getStatus())
+        int newlyConfirmed = RequestStatus.CONFIRMED.equals(updateRequest.getStatus())
                 ? requestsToUpdate.size()
                 : 0;
 
@@ -278,11 +278,11 @@ public class RequestServiceImpl implements RequestService {
                 .map(mapper::toDto)
                 .toList();
 
-        Map<String, List<ParticipationRequestDto>> groupedRequests = updatedDtos.stream()
+        Map<RequestStatus, List<ParticipationRequestDto>> groupedRequests = updatedDtos.stream()
                 .collect(Collectors.groupingBy(ParticipationRequestDto::getStatus));
 
-        List<ParticipationRequestDto> confirmedRequests = groupedRequests.getOrDefault("CONFIRMED", List.of());
-        List<ParticipationRequestDto> rejectedRequests = groupedRequests.getOrDefault("REJECTED", List.of());
+        List<ParticipationRequestDto> confirmedRequests = groupedRequests.getOrDefault(RequestStatus.CONFIRMED, List.of());
+        List<ParticipationRequestDto> rejectedRequests = groupedRequests.getOrDefault(RequestStatus.REJECTED, List.of());
 
         return new EventRequestStatusUpdateResult(confirmedRequests, rejectedRequests);
     }
