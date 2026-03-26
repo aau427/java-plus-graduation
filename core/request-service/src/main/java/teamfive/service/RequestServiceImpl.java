@@ -27,6 +27,10 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
+/*  По идее нужно было просто организовать межсервисное взаимодействие
+    через feign клиенты. Но...не смог пройти мимо - подчистил create (ну совсем все плохо было, а также
+    updateRequestStatuses. Там совсем все плохо было.
+ */
 @Slf4j
 @Service
 @AllArgsConstructor
@@ -38,91 +42,58 @@ public class RequestServiceImpl implements RequestService {
     private final RequestMapper mapper;
     private final EventServiceClient eventClient;
 
-    //TODO: переписать нахрен этот бред
-    @Override
     @Transactional
     public ParticipationRequestDto create(Long userId, Long eventId) {
-        EventInternalDto event = eventClient.getEventInternalById(eventId);
-        log.info("Создание запроса: userId={}, eventId={}, eventState={}, participantLimit={}",
-                userId, eventId, event.getState(), event.getParticipantLimit());
-        try {
-            UserDto user = userClient.getByIds(List.of(userId))
-                    .stream()
-                    .findFirst()
-                    .orElseThrow(() -> new NotFoundException("User not found with id: " + userId));
+        log.info("Создание запроса: userId={}, eventId={}", userId, eventId);
 
-            if (repository.findByEventIdAndRequesterId(eventId, userId).isPresent()) {
-                throw new DuplicatedException("Такая заявка уже создана");
-            }
-
-            if (event.getInitiatorId() == null) {
-                throw new ConflictException("Некорректные данные инициатора события");
-            }
-
-            if (event.getInitiatorId().equals(userId)) {
-                throw new ConflictException("Инициатор события не может добавить запрос на участие в своём событии");
-            }
-
-            if (!EventState.PUBLISHED.equals(event.getState())) {
-                throw new ConflictException("Нельзя участвовать в неопубликованном событии");
-            }
-
-            int participantLimit = event.getParticipantLimit() != null ? event.getParticipantLimit() : 0;
-            boolean requestModeration = event.getRequestModeration() != null ? event.getRequestModeration() : true;
-
-            int confirmedCount = repository.countByEventIdAndStatus(eventId, RequestStatus.CONFIRMED);
-
-            RequestStatus status;
-
-            if (participantLimit == 0) {
-                status = RequestStatus.CONFIRMED;
-            } else if (event.getRequestModeration() == null || !event.getRequestModeration()) {
-                if (confirmedCount < event.getParticipantLimit()) {
-                    status = RequestStatus.CONFIRMED;
-                } else {
-                    throw new ConflictException("Достигнут лимит участников");
-                }
-            } else {
-                if (confirmedCount < event.getParticipantLimit()) {
-                    status = RequestStatus.PENDING;
-                } else {
-                    throw new ConflictException("Достигнут лимит участников");
-                }
-
-                if (!requestModeration) {
-                    status = RequestStatus.CONFIRMED;
-                    log.info("Модерация отключена - статус CONFIRMED");
-                } else {
-                    status = RequestStatus.PENDING;
-                    log.info("Требуется модерация - статус PENDING");
-                }
-            }
-
-            ParticipationRequest request = ParticipationRequest.builder()
-                    .requesterId(userId)
-                    .eventId(eventId)
-                    .status(status)
-                    .created(LocalDateTime.now())
-                    .build();
-
-            ParticipationRequest savedRequest = repository.save(request);
-
-            ParticipationRequestDto result = mapper.toDtoSafe(savedRequest);
-            if (result == null) {
-                throw new RuntimeException("Ошибка преобразования данных запроса");
-            }
-
-            return result;
-
-        } catch (NotFoundException | ConflictException | DuplicatedException e) {
-            throw e;
-        } catch (DataAccessException e) {
-            log.error("Ошибка доступа к данным при создании запроса: {}", e.getMessage(), e);
-            throw new RuntimeException("Ошибка базы данных при создании заявки");
-        } catch (Exception e) {
-            log.error("Неожиданная ошибка при создании заявки: {}", e.getMessage(), e);
-            throw new RuntimeException("Внутренняя ошибка сервера при создании заявки");
+        // 1. Проверка на дубликат (самая быстрая операция)
+        if (repository.existsByEventIdAndRequesterId(eventId, userId)) {
+            throw new DuplicatedException("Заявка на участие в этом событии уже создана");
         }
+
+        // 2. Получаем данные события из внешнего сервиса
+        EventInternalDto event = eventClient.getEventInternalById(eventId);
+
+        // 3. Валидация бизнес-правил (инициатор, статус события)
+        validateParticipation(event, userId);
+
+        // 4. Подготовка параметров
+        int limit = Objects.requireNonNullElse(event.getParticipantLimit(), 0);
+        boolean moderation = Objects.requireNonNullElse(event.getRequestModeration(), true);
+
+        // Считаем текущее количество участников, если есть лимит
+        long confirmedCount = (limit > 0)
+                ? repository.countByEventIdAndStatus(eventId, RequestStatus.CONFIRMED)
+                : 0;
+
+        // 5. Проверка лимита и определение статуса
+        if (limit > 0 && confirmedCount >= limit) {
+            throw new ConflictException("Достигнут лимит участников события");
+        }
+
+        // Статус: CONFIRMED, если лимита нет (0) ИЛИ модерация не требуется. Иначе PENDING.
+        RequestStatus status = (limit == 0 || !moderation)
+                ? RequestStatus.CONFIRMED
+                : RequestStatus.PENDING;
+
+        // 6. Создание и сохранение заявки
+        ParticipationRequest request = ParticipationRequest.builder()
+                .requesterId(userId)
+                .eventId(eventId)
+                .status(status)
+                .created(LocalDateTime.now())
+                .build();
+
+        ParticipationRequest savedRequest = repository.save(request);
+
+        // 7. Синхронизация с сервисом событий
+        if (status == RequestStatus.CONFIRMED) {
+            eventClient.incrementConfirmedRequests(eventId, 1);
+            log.info("Счетчик участников события {} увеличен на 1", eventId);
+        }
+
+        log.info("Заявка успешно создана с ID={} и статусом {}", savedRequest.getId(), status);
+        return mapper.toDto(savedRequest);
     }
 
     @Override
@@ -220,7 +191,6 @@ public class RequestServiceImpl implements RequestService {
         }
     }
 
-    //TODO: зачем он в DTO status как String объявил? Это же гемморр. Будет время  - переделать
     @Override
     @Transactional
     public EventRequestStatusUpdateResult updateRequestStatuses(Long userId, Long eventId,
@@ -285,6 +255,15 @@ public class RequestServiceImpl implements RequestService {
         List<ParticipationRequestDto> rejectedRequests = groupedRequests.getOrDefault(RequestStatus.REJECTED, List.of());
 
         return new EventRequestStatusUpdateResult(confirmedRequests, rejectedRequests);
+    }
+
+    private void validateParticipation(EventInternalDto event, Long userId) {
+        if (event.getInitiatorId() == null || event.getInitiatorId().equals(userId)) {
+            throw new ConflictException("Инициатор не может участвовать в своем событии");
+        }
+        if (event.getState() != EventState.PUBLISHED) {
+            throw new ConflictException("Нельзя участвовать в неопубликованном событии");
+        }
     }
 }
 
