@@ -1,4 +1,4 @@
-package teamfive.comment.dto;
+package teamfive.dto.comment;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.AllArgsConstructor;

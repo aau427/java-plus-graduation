@@ -1,4 +1,4 @@
-package teamfive.comment.controller;
+package teamfive.controller;
 
 import jakarta.validation.constraints.Positive;
 import lombok.RequiredArgsConstructor;
@@ -6,7 +6,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
-import teamfive.comment.service.CommentService;
+import teamfive.service.CommentService;
 
 @Slf4j
 @RestController

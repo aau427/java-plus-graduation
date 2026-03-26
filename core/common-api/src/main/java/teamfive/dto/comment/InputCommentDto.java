@@ -1,4 +1,4 @@
-package teamfive.comment.dto;
+package teamfive.dto.comment;
 
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;

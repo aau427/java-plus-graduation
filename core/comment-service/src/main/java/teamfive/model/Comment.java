@@ -1,11 +1,7 @@
-package teamfive.comment.model;
+package teamfive.model;
 
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
-import teamfive.event.model.Event;
+import lombok.*;
 
 import java.time.LocalDateTime;
 
@@ -13,6 +9,7 @@ import java.time.LocalDateTime;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
+@Builder
 @Entity
 @Table(name = "comments")
 public class Comment {
@@ -26,9 +23,8 @@ public class Comment {
     @Column(name = "user_id", nullable = false)
     private Long userId;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "event_id")
-    private Event event;
+    @Column(name = "event_id", nullable = false)
+    private Long eventId;
 
     @Column(name = "create_date")
     private LocalDateTime created;

@@ -4,6 +4,12 @@ spring:
   cloud:
     gateway:
       routes:
+        # comment-service
+        - id: comment_service_route
+          uri: lb://comment-service
+          predicates:
+            - Path=/admin/comments/**, /user/*/comments/**, /comments/**
+
         # request-service
         - id: request_service_route
           uri: lb://request-service

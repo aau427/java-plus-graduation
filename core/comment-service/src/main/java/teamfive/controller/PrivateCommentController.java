@@ -1,4 +1,4 @@
-package teamfive.comment.controller;
+package teamfive.controller;
 
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Positive;
@@ -7,10 +7,10 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
-import teamfive.comment.dto.CommentDto;
-import teamfive.comment.dto.InputCommentDto;
-import teamfive.comment.dto.UpdateCommentDto;
-import teamfive.comment.service.CommentService;
+import teamfive.dto.comment.CommentDto;
+import teamfive.dto.comment.InputCommentDto;
+import teamfive.dto.comment.UpdateCommentDto;
+import teamfive.service.CommentService;
 
 import java.util.List;
 
