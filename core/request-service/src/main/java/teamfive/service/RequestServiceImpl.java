@@ -70,7 +70,7 @@ public class RequestServiceImpl implements RequestService {
             int participantLimit = event.getParticipantLimit() != null ? event.getParticipantLimit() : 0;
             boolean requestModeration = event.getRequestModeration() != null ? event.getRequestModeration() : true;
 
-            int confirmedCount = repository.findAllByEventIdAndStatus(eventId, RequestStatus.CONFIRMED).size();
+            int confirmedCount = repository.countByEventIdAndStatus(eventId, RequestStatus.CONFIRMED);
 
             RequestStatus status;
 
