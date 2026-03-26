@@ -12,9 +12,9 @@ import org.springframework.context.annotation.ComponentScan;
         "dto"
 })
 @EnableFeignClients(basePackages = "teamfive.feignclient")
-public class MainServiceApp {
+public class EventServiceApp {
 
     public static void main(String[] args) {
-        SpringApplication.run(MainServiceApp.class, args);
+        SpringApplication.run(EventServiceApp.class, args);
     }
 }

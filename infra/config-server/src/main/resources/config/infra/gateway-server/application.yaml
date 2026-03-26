@@ -21,9 +21,9 @@ spring:
           uri: lb://user-service
           predicates:
             - Path=/admin/users/**
-        # main-service
-        - id: main_service_route
-          uri: lb://main-service
+        # event-service
+        - id: event_service_route
+          uri: lb://event-service
           predicates:
             - Path=/admin/**, /users/**, /user/**, /events/**, /categories/**, /compilations/**, /comments/**
 
