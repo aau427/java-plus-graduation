@@ -39,6 +39,9 @@ resilience4j:
         waitDurationInOpenState: 10s
         permittedNumberOfCallsInHalfOpenState: 3
         automaticTransitionFromOpenToHalfOpenEnabled: true
+        # 2. КРИТИЧНО: Игнорируем 404, чтобы сервисе не вырубался
+        ignoreExceptions:
+          - teamfive.exception.NotFoundException
 
   retry:
     configs:
@@ -48,7 +51,6 @@ resilience4j:
         retryExceptions:
           - feign.RetryableException
           - java.util.concurrent.TimeoutException
-          - org.springframework.cloud.client.loadbalancer.ServiceInstanceListSupplier.ServiceUnavailableException
 
   timelimiter:
     configs:

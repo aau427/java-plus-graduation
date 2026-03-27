@@ -22,7 +22,7 @@ import teamfive.event.model.EventLocation;
 import teamfive.event.storage.EventRepository;
 import teamfive.exception.ConflictException;
 import teamfive.exception.NotFoundException;
-import teamfive.feignclient.UserServiceClient;
+import teamfive.feignclient.user.UserServiceClient;
 
 import java.time.LocalDateTime;
 import java.util.List;

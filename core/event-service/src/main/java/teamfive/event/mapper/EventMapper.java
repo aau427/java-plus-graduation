@@ -12,7 +12,7 @@ import teamfive.dto.user.UserDto;
 import teamfive.enums.EventState;
 import teamfive.event.model.Event;
 import teamfive.event.view.EventInternalView;
-import teamfive.feignclient.UserServiceClient;
+import teamfive.feignclient.user.UserServiceClient;
 
 import java.util.List;
 

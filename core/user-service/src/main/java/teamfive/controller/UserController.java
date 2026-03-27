@@ -13,7 +13,7 @@ import org.springframework.web.bind.annotation.*;
 import teamfive.dto.user.UserDto;
 import teamfive.dto.user.UserRequestDto;
 import teamfive.dto.user.UserUpdateDto;
-import teamfive.feignclient.UserOperations;
+import teamfive.feignclient.user.UserOperations;
 import teamfive.service.UserService;
 
 import java.util.List;

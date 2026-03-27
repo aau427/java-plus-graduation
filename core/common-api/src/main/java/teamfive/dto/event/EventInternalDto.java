@@ -7,7 +7,7 @@ import lombok.Setter;
 import teamfive.enums.EventState;
 
 
-//TODO: имплементировать интерфейс (разрез)
+
 @Getter
 @Setter
 @NoArgsConstructor

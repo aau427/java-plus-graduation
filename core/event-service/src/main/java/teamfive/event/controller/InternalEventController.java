@@ -4,7 +4,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 import teamfive.dto.event.EventInternalDto;
 import teamfive.event.service.EventService;
-import teamfive.feignclient.EventServiceClient;
+import teamfive.feignclient.event.EventServiceClient;
 
 @RestController
 @RequiredArgsConstructor

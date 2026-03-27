@@ -13,6 +13,13 @@ import java.io.StringWriter;
 @Slf4j
 @RestControllerAdvice
 public class GeneralExceptionHandler {
+    @ExceptionHandler(ServiceUnavailableException.class)
+    @ResponseStatus(HttpStatus.SERVICE_UNAVAILABLE) // Отдаем честный 503
+    public ErrorResponse handleServiceUnavailable(final ServiceUnavailableException e) {
+        String reason = "Внешний сервис временно недоступен.";
+        log.error("{}. {}", reason, e.getMessage());
+        return new ErrorResponse(HttpStatus.SERVICE_UNAVAILABLE, reason, e.getMessage(), getStackTrace(e));
+    }
 
     @ExceptionHandler
     @ResponseStatus(HttpStatus.NOT_FOUND)
