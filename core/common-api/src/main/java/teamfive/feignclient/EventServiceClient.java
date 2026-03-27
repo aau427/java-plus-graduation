@@ -7,7 +7,6 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import teamfive.dto.event.EventInternalDto;
 
-//TODO: в конце main-service поменяется на event-service, как сказал наставник
 @FeignClient(name = "event-service", path = "/internal/events")
 public interface EventServiceClient {
 

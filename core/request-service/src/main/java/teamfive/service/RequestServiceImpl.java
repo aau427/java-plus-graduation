@@ -27,10 +27,6 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
-/*  По идее нужно было просто организовать межсервисное взаимодействие
-    через feign клиенты. Но...не смог пройти мимо - подчистил create (ну совсем все плохо было, а также
-    updateRequestStatuses. Там совсем все плохо было.
- */
 @Slf4j
 @Service
 @AllArgsConstructor
@@ -46,37 +42,29 @@ public class RequestServiceImpl implements RequestService {
     public ParticipationRequestDto create(Long userId, Long eventId) {
         log.info("Создание запроса: userId={}, eventId={}", userId, eventId);
 
-        // 1. Проверка на дубликат (самая быстрая операция)
         if (repository.existsByEventIdAndRequesterId(eventId, userId)) {
             throw new DuplicatedException("Заявка на участие в этом событии уже создана");
         }
 
-        // 2. Получаем данные события из внешнего сервиса
         EventInternalDto event = eventClient.getEventInternalById(eventId);
 
-        // 3. Валидация бизнес-правил (инициатор, статус события)
         validateParticipation(event, userId);
 
-        // 4. Подготовка параметров
         int limit = Objects.requireNonNullElse(event.getParticipantLimit(), 0);
         boolean moderation = Objects.requireNonNullElse(event.getRequestModeration(), true);
 
-        // Считаем текущее количество участников, если есть лимит
         long confirmedCount = (limit > 0)
                 ? repository.countByEventIdAndStatus(eventId, RequestStatus.CONFIRMED)
                 : 0;
 
-        // 5. Проверка лимита и определение статуса
         if (limit > 0 && confirmedCount >= limit) {
             throw new ConflictException("Достигнут лимит участников события");
         }
 
-        // Статус: CONFIRMED, если лимита нет (0) ИЛИ модерация не требуется. Иначе PENDING.
         RequestStatus status = (limit == 0 || !moderation)
                 ? RequestStatus.CONFIRMED
                 : RequestStatus.PENDING;
 
-        // 6. Создание и сохранение заявки
         ParticipationRequest request = ParticipationRequest.builder()
                 .requesterId(userId)
                 .eventId(eventId)
@@ -86,7 +74,6 @@ public class RequestServiceImpl implements RequestService {
 
         ParticipationRequest savedRequest = repository.save(request);
 
-        // 7. Синхронизация с сервисом событий
         if (status == RequestStatus.CONFIRMED) {
             eventClient.incrementConfirmedRequests(eventId, 1);
             log.info("Счетчик участников события {} увеличен на 1", eventId);
