@@ -78,8 +78,11 @@
        `public List<StatDto> getStats(ParamRequest paramRequest)`
 
 ## Внешний API
+Внешний апи доступен через шлюз gateway-server на порту 8080
+спецификации:
+[Все сервисы, за исключением сервиса статистики](https://github.com/aau427/java-plus-graduation/blob/main/ewm-main-service-spec.json)
+[Сервис статистики](https://github.com/aau427/java-plus-graduation/blob/main/ewm-stats-service-spec.json)
 
-внешний апи доступен через шлюз gateway-server на порту 8080
-маршруты определены в application.yaml сервиса gateway-server.
+Маршруты определены в application.yaml сервиса gateway-server.
 Внимание: реальный application.yaml сервиса выдает config-server (см. выше)
 
