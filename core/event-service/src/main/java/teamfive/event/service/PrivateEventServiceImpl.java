@@ -87,8 +87,7 @@ public class PrivateEventServiceImpl implements PrivateEventService {
         log.info("Получение событий пользователя: userId={}, from={}, size={}", userId, from, size);
 
         validatePaginationParams(from, size);
-
-        UserDto user = getUserDtoOrThrow(userId);
+        UserDto userDto = getUserDtoOrThrow(userId);
 
         int page = from / size;
         Pageable pageable = PageRequest.of(page, size, Sort.by("id").descending());
@@ -96,7 +95,11 @@ public class PrivateEventServiceImpl implements PrivateEventService {
         Page<Event> events = eventRepository.findByInitiatorId(userId, pageable);
 
         return events.getContent().stream()
-                .map(eventMapper::toEventShortDto)
+                .map(event -> {
+                    EventShortDto eventShortDto = eventMapper.toEventShortDto(event);
+                    eventShortDto.setInitiator(userDto);
+                    return eventShortDto;
+                })
                 .collect(Collectors.toList());
     }
 
@@ -108,7 +111,11 @@ public class PrivateEventServiceImpl implements PrivateEventService {
                 .orElseThrow(() -> new NotFoundException(
                         "Событие с id=" + eventId + " для пользователя с id=" + userId + " не найдено"));
 
-        return eventMapper.toEventResponseDto(event);
+        EventResponseDto eventResponseDto = eventMapper.toEventResponseDto(event);
+        UserDto userDto = getUserDtoOrThrow(userId);
+        eventResponseDto.setInitiator(userDto);
+
+        return eventResponseDto;
     }
 
     @Transactional

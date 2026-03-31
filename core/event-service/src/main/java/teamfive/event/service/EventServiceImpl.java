@@ -18,6 +18,7 @@ import teamfive.dto.event.EventInternalDto;
 import teamfive.dto.event.EventResponseDto;
 import teamfive.dto.event.EventShortDto;
 import teamfive.dto.event.EventUpdateRequestDto;
+import teamfive.dto.user.UserDto;
 import teamfive.enums.EventState;
 import teamfive.event.mapper.EventMapper;
 import teamfive.event.model.Event;
@@ -27,11 +28,14 @@ import teamfive.event.view.EventInternalView;
 import teamfive.exception.ConflictException;
 import teamfive.exception.NotFoundException;
 import teamfive.exception.ValidationException;
+import teamfive.feignclient.user.UserServiceClient;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -44,6 +48,7 @@ public class EventServiceImpl implements EventService {
     private final CategoryRepository categoryRepository;
     private final EventMapper eventMapper;
     private final StatClient client;
+    private final UserServiceClient userClient;
 
     private static final DateTimeFormatter FORMATTER = DateTimeFormatter.ISO_DATE_TIME;
 
@@ -87,9 +92,16 @@ public class EventServiceImpl implements EventService {
         }
 
         Page<Event> events = eventRepository.findAll(spec, pageable);
+        Map<Long, Long> viewsMap = getViewsBatch(events.getContent());
+        Map<Long, UserDto> usersMap = getUsersMap(events.getContent());
 
         return events.getContent().stream()
-                .map(eventMapper::toEventResponseDto)
+                .map(event -> {
+                    EventResponseDto responseDto = eventMapper.toEventResponseDto(event);
+                    responseDto.setViews(viewsMap.getOrDefault(event.getId(), 0L));
+                    responseDto.setInitiator(usersMap.get(event.getId()));
+                    return responseDto;
+                })
                 .collect(Collectors.toList());
     }
 
@@ -218,11 +230,15 @@ public class EventServiceImpl implements EventService {
 
         Page<Event> events = eventRepository.findAll(spec, pageable);
 
+        Map<Long, UserDto> userDtoMap = getUsersMap(events.getContent());
+        Map<Long, Long> viewsMap = getViewsBatch(events.getContent());
+
         return events.getContent().stream()
                 .map(event -> {
-                    Long views = getViewsClientForList(event);
-                    event.setViews(views);
-                    return eventMapper.toEventShortDto(event);
+                    EventShortDto eventShortDto = eventMapper.toEventShortDto(event);
+                    eventShortDto.setViews(viewsMap.getOrDefault(event.getId(), 0L));
+                    eventShortDto.setInitiator(userDtoMap.get(event.getInitiatorId()));
+                    return eventShortDto;
                 })
                 .collect(Collectors.toList());
     }
@@ -243,7 +259,14 @@ public class EventServiceImpl implements EventService {
 
         event.setViews(viewsFromStats);
 
-        return eventMapper.toEventResponseDto(event);
+        EventResponseDto eventResponseDto = eventMapper.toEventResponseDto(event);
+        UserDto userDto = userClient.getByIds(List.of(event.getInitiatorId()))
+                .stream()
+                .findFirst()
+                .orElseThrow(() -> new NotFoundException("Не найден пользователь " + event.getInitiatorId()));
+        eventResponseDto.setInitiator(userDto);
+
+        return eventResponseDto;
     }
 
     @Override
@@ -328,30 +351,54 @@ public class EventServiceImpl implements EventService {
         return from / size;
     }
 
-    private Long getViewsClientForList(Event event) {
-        try {
-            String uri = "/events/" + event.getId();
-            LocalDateTime publishDate = event.getPublishedOn() != null ?
-                    event.getPublishedOn() : LocalDateTime.now().minusYears(1);
 
-            ParamRequest paramRequest = new ParamRequest(
-                    publishDate,
-                    LocalDateTime.now(),
-                    Collections.singletonList(uri),
-                    false);
+    private Map<Long, UserDto> getUsersMap(List<Event> eventList) {
+        List<Long> userIdList = eventList
+                .stream()
+                .map(Event::getInitiatorId)
+                .toList();
+        List<UserDto> userDtoList = userClient.getByIds(userIdList);
 
-            List<StatDto> stats = client.getStats(paramRequest);
+        return userDtoList.stream()
+                .collect(Collectors.toMap(UserDto::getId, userDto -> userDto));
+    }
 
-            Long totalViews = stats.stream()
-                    .mapToLong(StatDto::getHits)
-                    .sum();
-
-            log.info("Просмотры для списка событий {}: {}", event.getId(), totalViews);
-            return totalViews;
-
-        } catch (Exception e) {
-            log.error("Ошибка при получении статистики для списка: {}", e.getMessage());
-            return event.getViews() != null ? event.getViews() : 0L;
+    private Map<Long, Long> getViewsBatch(List<Event> events) {
+        if (events == null || events.isEmpty()) {
+            return Collections.emptyMap();
         }
+
+        LocalDateTime start = events.stream()
+                .map(Event::getPublishedOn)
+                .filter(Objects::nonNull)
+                .min(LocalDateTime::compareTo)
+                .orElse(LocalDateTime.now().minusYears(1));
+
+        List<String> uris = events.stream()
+                .map(e -> "/events/" + e.getId())
+                .toList();
+
+        List<StatDto> stats;
+        try {
+            stats = client.getStats(ParamRequest.builder()
+                    .start(start)
+                    .end(LocalDateTime.now())
+                    .uris(uris)
+                    .unique(false)
+                    .build());
+        } catch (Exception exception) {
+            log.error("Ошибка при получении статистики для списка: {}", exception.getMessage());
+            return Collections.emptyMap();
+        }
+        if (stats == null || stats.isEmpty()) {
+            return Collections.emptyMap();
+        }
+
+        return stats.stream()
+                .collect(Collectors.toMap(
+                        s -> Long.parseLong(s.getUri().replace("/events/", "")),
+                        StatDto::getHits,
+                        Long::sum
+                ));
     }
 }

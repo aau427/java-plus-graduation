@@ -7,7 +7,6 @@ import lombok.Setter;
 import teamfive.enums.EventState;
 
 
-
 @Getter
 @Setter
 @NoArgsConstructor
