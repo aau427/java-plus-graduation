@@ -4,9 +4,26 @@ spring:
   cloud:
     gateway:
       routes:
-        # main-service
-        - id: main_service_route
-          uri: lb://main-service
+        # comment-service
+        - id: comment_service_route
+          uri: lb://comment-service
+          predicates:
+            - Path=/admin/comments/**, /user/*/comments/**, /comments/**
+
+        # request-service
+        - id: request_service_route
+          uri: lb://request-service
+          predicates:
+            - Path=/users/*/requests/**, /users/*/events/*/requests/**
+
+        # user-service
+        - id: user_service_route
+          uri: lb://user-service
+          predicates:
+            - Path=/admin/users/**
+        # event-service
+        - id: event_service_route
+          uri: lb://event-service
           predicates:
             - Path=/admin/**, /users/**, /user/**, /events/**, /categories/**, /compilations/**, /comments/**
 
