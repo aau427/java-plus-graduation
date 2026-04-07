@@ -4,7 +4,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
-import teamfive.client.StatClient;
+import teamfive.client.statclient.StatClient;
 import teamfive.dto.event.EventResponseDto;
 import teamfive.dto.event.EventShortDto;
 import teamfive.event.service.EventService;
