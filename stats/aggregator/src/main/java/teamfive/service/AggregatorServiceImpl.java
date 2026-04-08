@@ -161,7 +161,6 @@ public class AggregatorServiceImpl implements AggregatorService {
                 log.error("Внимание! Знаменатель равен 0 при расчете косинуса для события {}", eventA);
             }
             double score = (denominator > 0) ? nominator / denominator : 0.0;
-            //TODO:
             if(score > 0) returnList.add(getEventAvro(eventA, eventB, score, timestamp));
         });
         return returnList;
