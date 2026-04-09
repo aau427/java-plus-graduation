@@ -8,11 +8,11 @@ import org.apache.kafka.clients.producer.ProducerRecord;
 import java.time.Duration;
 
 @Slf4j
-public abstract class BaseKafkaClient implements AutoCloseable {
+public abstract class BaseKafkaClient<K> implements AutoCloseable {
 
-    private final KafkaProducer<Long, SpecificRecordBase> producer;
+    private final KafkaProducer<K, SpecificRecordBase> producer;
 
-    public BaseKafkaClient(KafkaProducer<Long, SpecificRecordBase> producer) {
+    public BaseKafkaClient(KafkaProducer<K, SpecificRecordBase> producer) {
         this.producer = producer;
     }
 
@@ -24,8 +24,8 @@ public abstract class BaseKafkaClient implements AutoCloseable {
         log.info("Kafka клиент успешно закрыт!");
     }
 
-    public void sendEvent(String topic, Long key, SpecificRecordBase record, long eventTimestamp) {
-        ProducerRecord<Long, SpecificRecordBase> producerRecord = new ProducerRecord<>(
+    public void sendEvent(String topic, K key, SpecificRecordBase record, long eventTimestamp) {
+        ProducerRecord<K, SpecificRecordBase> producerRecord = new ProducerRecord<>(
                 topic,
                 null,   //партицию Kafka выберет сама
                 eventTimestamp,  // 3. Тот самый TIMESTAMP события (в миллисекундах)

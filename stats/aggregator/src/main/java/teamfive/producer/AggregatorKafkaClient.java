@@ -10,7 +10,7 @@ import teamfive.BaseKafkaClient;
 public class AggregatorKafkaClient extends BaseKafkaClient {
 
     public AggregatorKafkaClient(@Qualifier("EventSimilarityProducer")
-                                 KafkaProducer<Long, SpecificRecordBase> producer) {
+                                 KafkaProducer<String, SpecificRecordBase> producer) {
         super(producer);
     }
 }

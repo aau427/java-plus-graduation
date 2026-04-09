@@ -77,7 +77,7 @@ public class AggregatorStarter {
         log.info("Агрегатор: отправляю  {} в топик {}",
                 event.getEventA(),
                 topicForProducer);
-        Long key = event.getEventA();
+        String key = event.getEventA() + ":" + event.getEventB();
         long now = System.currentTimeMillis();
         kafkaClient.sendEvent(topicForProducer,
                 key,
