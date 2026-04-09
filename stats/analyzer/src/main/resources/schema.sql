@@ -15,3 +15,14 @@ CREATE TABLE IF NOT EXISTS events_similarity(
     timestamp TIMESTAMP WITH TIME ZONE NOT NULL,
     UNIQUE (event_a, event_b)
 );
+
+-- Индекс для быстрого поиска истории пользователя и фильтрации просмотренного
+CREATE INDEX IF NOT EXISTS idx_interactions_user_event_ts
+ON interactions (user_id, event_id, timestamp DESC);
+
+-- Индексы для поиска подобия в обе стороны с учетом веса
+CREATE INDEX IF NOT EXISTS idx_similarity_a_score
+ON events_similarity (event_a, score DESC);
+
+CREATE INDEX IF NOT EXISTS idx_similarity_b_score
+ON events_similarity (event_b, score DESC);
