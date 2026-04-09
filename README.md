@@ -35,10 +35,10 @@
     - Порт: 8761.
 - **config-server**: централизованное управление конфигурациями, загружает application.yaml для каждого сервиса из
   локальных файлов, расположенных по адресам:
-  - classpath:config/core/{application}
-  - classpath:config/stats/{application}
-  - classpath:config/infra/{application}
-    - Порт: динамический.
+    - classpath:config/core/{application}
+    - classpath:config/stats/{application}
+    - classpath:config/infra/{application}
+        - Порт: динамический.
 - **gateway-server** (Spring Cloud Gateway): шлюз для маршрутизации внешних запросов к сервисам, использует Eureka для
   маршрутизации по именам сервисов
     - Порт: 8080.
@@ -70,14 +70,16 @@
       `EventInternalDto getEventInternalById(@PathVariable Long eventId);`
 
 2**UserClient**
+
 - получить инициаторов по списку ID:
-`List<UserDto> getByIds(List<Long> ids)`
+  `List<UserDto> getByIds(List<Long> ids)`
 
 3**StatsClient** (stats-server):
+
 - добавить хит (просмотр):
-`public void hit(HttpServletRequest request)`
+  `public void hit(HttpServletRequest request)`
 - получить статистику:
-`public List<StatDto> getStats(ParamRequest paramRequest)`
+  `public List<StatDto> getStats(ParamRequest paramRequest)`
 
 ## Внешний API
 

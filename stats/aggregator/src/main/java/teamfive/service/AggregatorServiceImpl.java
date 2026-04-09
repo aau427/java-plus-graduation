@@ -88,7 +88,7 @@ public class AggregatorServiceImpl implements AggregatorService {
             }
             //сумма минимальных весов для пары (A, B)
             double nominator = repository.getMinWeightSum(eventA, eventB);
-            if(nominator == 0.0) {
+            if (nominator == 0.0) {
                 return;
             }
             double denominator = Math.sqrt(repository.getTotalWeight(eventA)) * Math.sqrt(repository.getTotalWeight(eventB));
@@ -97,7 +97,7 @@ public class AggregatorServiceImpl implements AggregatorService {
                 log.error("Внимание! Знаменатель равен 0 при расчете косинуса для события {}", eventA);
             }
             double score = (denominator > 0) ? nominator / denominator : 0.0;
-            if(score > 0) returnList.add(getEventAvro(eventA, eventB, score, instant));
+            if (score > 0) returnList.add(getEventAvro(eventA, eventB, score, instant));
         });
 
         return returnList;
@@ -149,7 +149,7 @@ public class AggregatorServiceImpl implements AggregatorService {
             double deltaSumMin = Math.min(weightB, newWeight) - Math.min(weightB, currentWeight);
             double oldSumMinWeighsAB = repository.getMinWeightSum(eventA, eventB);
             double nominator = oldSumMinWeighsAB + deltaSumMin;
-            if(nominator == 0) {
+            if (nominator == 0) {
                 return;
             }
 
@@ -161,7 +161,7 @@ public class AggregatorServiceImpl implements AggregatorService {
                 log.error("Внимание! Знаменатель равен 0 при расчете косинуса для события {}", eventA);
             }
             double score = (denominator > 0) ? nominator / denominator : 0.0;
-            if(score > 0) returnList.add(getEventAvro(eventA, eventB, score, timestamp));
+            if (score > 0) returnList.add(getEventAvro(eventA, eventB, score, timestamp));
         });
         return returnList;
     }

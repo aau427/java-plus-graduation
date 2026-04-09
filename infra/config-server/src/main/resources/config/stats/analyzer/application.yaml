@@ -15,9 +15,9 @@ spring:
       # Всегда выполнять скрипты при старте
       mode: always
   jpa:
-     database-platform: org.hibernate.dialect.PostgreSQLDialect
-     hibernate:
-       ddl-auto: none
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+    hibernate:
+      ddl-auto: none
 
   datasource:
     driver-class-name: org.postgresql.Driver

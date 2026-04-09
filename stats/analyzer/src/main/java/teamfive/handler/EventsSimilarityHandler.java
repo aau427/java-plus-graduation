@@ -20,7 +20,7 @@ public class EventsSimilarityHandler {
         repository.findByEventAAndEventB(first, second)
                 .ifPresentOrElse(
                         existing -> {
-                            if(event.getTimestamp().isAfter(existing.getTimestamp())) {
+                            if (event.getTimestamp().isAfter(existing.getTimestamp())) {
                                 existing.setScore(event.getScore());
                                 existing.setTimestamp(event.getTimestamp());
                                 repository.save(existing);
