@@ -62,4 +62,34 @@ public interface EventsSimilarityRepository extends JpaRepository<EventsSimilari
                     """)
     List<EventProjection> findEverySimilar(@Param("userId") long userId, @Param("limit") int limit);
 
+    @Query(nativeQuery = true,
+            value = """
+                    SELECT 
+                        eventId,
+                        SUM(score * rating) / NULLIF(SUM(score), 0) AS totalScore
+                    FROM (
+                        SELECT 
+                            t.target_id AS eventId,
+                            s.score,
+                            i.rating,
+                            ROW_NUMBER() OVER (
+                                PARTITION BY t.target_id 
+                                ORDER BY s.score DESC
+                            ) as neighbor_rank
+                        FROM (SELECT unnest(CAST(:targetIds AS bigint[])) as target_id) AS t
+                        JOIN events_similarity s ON (s.event_a = t.target_id OR s.event_b = t.target_id)
+                        JOIN interactions i ON i.user_id = :userId 
+                            AND i.event_id = (CASE WHEN s.event_a = t.target_id THEN s.event_b ELSE s.event_a END)
+                    ) AS ranked_neighbors
+                    WHERE neighbor_rank <= :k
+                    GROUP BY eventId
+                    ORDER BY totalScore DESC -- Сортируем от лучших предсказаний к худшим
+                    """)
+    List<EventProjection> predictScoresForList(
+            @Param("userId") long userId,
+            @Param("targetIds") Long[] targetIds,
+            @Param("k") int k
+    );
+
+
 }

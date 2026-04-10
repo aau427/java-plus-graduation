@@ -309,12 +309,6 @@ public class EventServiceImpl implements EventService {
 
     @Override
     public void sendLike(Long userId, Long eventId) {
-        //TODO: реализовать через feign - клиент
-        /*
-            Пользователь может лайкать только посещённые им мероприятия.
-            В противном случае возвращается ошибка 400 BAD REQUEST.
-         */
-
         collectorClient.collectUserAction(userId, eventId, ActionTypeProto.ACTION_LIKE);
     }
 

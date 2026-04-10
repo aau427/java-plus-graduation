@@ -9,9 +9,12 @@ import ru.practicum.ewm.grpc.stats.message.RecommendedEventProto;
 import ru.practicum.ewm.grpc.stats.message.SimilarEventsRequestProto;
 import ru.practicum.ewm.grpc.stats.message.UserPredictionsRequestProto;
 import teamfive.mapper.InteractionMapper;
+import teamfive.model.EventProjection;
 import teamfive.repository.EventsSimilarityRepository;
 import teamfive.repository.InteractionRepository;
 
+import java.util.Collections;
+import java.util.List;
 import java.util.stream.Stream;
 
 @Service
@@ -22,8 +25,10 @@ public class RecommendationServiceImpl implements RecommendationService {
 
     private final InteractionRepository interactionRepository;
     private final EventsSimilarityRepository similarityRepository;
-
     private final InteractionMapper mapper;
+
+    // Количество ближайших соседей для алгоритма предсказания
+    private static final int K_NEAREST_NEIGHBORS = 100;
 
     /*
         возвращает список мероприятий с указанием с суммой максимальных весов
@@ -41,19 +46,24 @@ public class RecommendationServiceImpl implements RecommendationService {
     }
 
     @Override
-    public Stream<RecommendedEventProto> getRecommendationsForUser(UserPredictionsRequestProto request) {
+    public List<RecommendedEventProto> getRecommendationsForUser(UserPredictionsRequestProto request) {
         if (request.getMaxResults() == 0) {
             log.info("В запросе рекомендаций для пользователя {} указан MaxCount = 0 !", request.getUserId());
-            return Stream.empty();
+            return Collections.emptyList();
         }
-        return similarityRepository.findEverySimilar(request.getUserId(), request.getMaxResults())
+        Long[] ids = similarityRepository
+                .findEverySimilar(request.getUserId(), request.getMaxResults())
                 .stream()
-                .map(mapper::mapProjectionToProto);
+                .map(EventProjection::getEventId)
+                .toArray(Long[]::new);
+        return similarityRepository.predictScoresForList(request.getUserId(), ids, K_NEAREST_NEIGHBORS)
+                .stream()
+                .map(mapper::mapProjectionToProto)
+                .toList();
     }
 
     /*  возвращает список мероприятий, с которыми не взаимодействовал пользователь,
         но которые максимально похожи на указанное мероприятие.
-        по-сути id мероприятий с коэффициентами подобия.
      */
     @Override
     public Stream<RecommendedEventProto> getSimilarEvents(SimilarEventsRequestProto request) {

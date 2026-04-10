@@ -6,7 +6,6 @@ import org.springframework.stereotype.Component;
 
 @Component
 @RequiredArgsConstructor
-//TODO: здесь поменял логику по сравнению с умным домом, запускаю отдельным потоком.
 public class AppRunner implements CommandLineRunner {
     private final AggregatorStarter appStarter;
 
