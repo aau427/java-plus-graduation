@@ -5,6 +5,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataAccessException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import ru.practicum.ewm.stats.proto.ActionTypeProto;
+import teamfive.client.collector.CollectorClient;
 import teamfive.dto.event.EventInternalDto;
 import teamfive.dto.event.EventRequestStatusUpdateRequest;
 import teamfive.dto.request.EventRequestStatusUpdateResult;
@@ -37,6 +39,7 @@ public class RequestServiceImpl implements RequestService {
     private final UserServiceClient userClient;
     private final RequestMapper mapper;
     private final EventServiceClient eventClient;
+    private final CollectorClient collectorClient;
 
     @Transactional
     public ParticipationRequestDto create(Long userId, Long eventId) {
@@ -78,7 +81,8 @@ public class RequestServiceImpl implements RequestService {
             eventClient.incrementConfirmedRequests(eventId, 1);
             log.info("Счетчик участников события {} увеличен на 1", eventId);
         }
-
+        //ТЗ: необходимо отправить информацию о регистрации пользователя на мероприятие.
+        collectorClient.collectUserAction(userId, eventId, ActionTypeProto.ACTION_REGISTER);
         log.info("Заявка успешно создана с ID={} и статусом {}", savedRequest.getId(), status);
         return mapper.toDto(savedRequest);
     }

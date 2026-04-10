@@ -73,7 +73,7 @@ public class PrivateEventServiceImpl implements PrivateEventService {
                 .title(eventRequestDto.getTitle())
                 .createdOn(LocalDateTime.now())
                 .confirmedRequests(0)
-                .views(0L)
+                .rating(0.0)
                 .build();
 
         Event savedEvent = eventRepository.save(event);

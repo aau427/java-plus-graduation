@@ -39,8 +39,8 @@ public class CollectorClient {
         } catch (StatusRuntimeException exception) {
             log.error("Ошибка gRPC при обращении к коллектору: {}, статус: {}",
                     exception.getLocalizedMessage(), exception.getStatus().getCode());
-        } catch (Exception e) {
-            log.error("Непредвиденная ошибка в CollectorClient: {}", e.getMessage());
+        } catch (Exception exception) {
+            log.error("Непредвиденная ошибка в CollectorClient: {}", exception.getMessage());
         }
     }
 }

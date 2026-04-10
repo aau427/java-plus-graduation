@@ -25,4 +25,10 @@ public interface EventService {
     EventInternalDto getEventInternalById(Long id);
 
     void incrementConfirmedRequests(Long eventId, Integer count);
+
+    List<EventShortDto> getEventsRecommendations(Long userId, int maxResults);
+
+    void sendLike(Long userId, Long eventId);
+
+    void sendView(Long userId, Long eventId);
 }
