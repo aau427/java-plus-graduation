@@ -18,11 +18,10 @@ import java.util.stream.StreamSupport;
 
 @Component
 @Slf4j
-@RequiredArgsConstructor
 public class RecommendationsClient {
 
     @GrpcClient("analyzer")
-    private final RecommendationsControllerGrpc.RecommendationsControllerBlockingStub client;
+    private RecommendationsControllerGrpc.RecommendationsControllerBlockingStub client;
 
     public List<RecommendedEventProto> getSimilarEvents(long eventId, long userId, int maxResults) {
         try {

@@ -2,7 +2,6 @@ package teamfive.client.collector;
 
 import com.google.protobuf.Timestamp;
 import io.grpc.StatusRuntimeException;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.devh.boot.grpc.client.inject.GrpcClient;
 import org.springframework.stereotype.Component;
@@ -14,11 +13,10 @@ import java.time.Instant;
 
 @Component
 @Slf4j
-@RequiredArgsConstructor
 public class CollectorClient {
 
     @GrpcClient("collector")
-    private final UserActionControllerGrpc.UserActionControllerBlockingStub client;
+    private UserActionControllerGrpc.UserActionControllerBlockingStub client;
 
     public void collectUserAction(long userId, long eventId, ActionTypeProto actionType) {
         try {
