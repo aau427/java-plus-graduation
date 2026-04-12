@@ -5,7 +5,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
 import teamfive.dto.event.EventResponseDto;
 import teamfive.dto.event.EventShortDto;
+import teamfive.event.service.EventRecommendationService;
 import teamfive.event.service.EventService;
+import teamfive.event.service.UserActionSender;
 
 import java.util.List;
 
@@ -15,6 +17,8 @@ import java.util.List;
 @RequestMapping("/events")
 public class PublicEventController {
     private final EventService eventService;
+    private final EventRecommendationService eventRecommendationService;
+    private final UserActionSender userActionSender;
 
     //private final StatClient client;
 
@@ -48,14 +52,14 @@ public class PublicEventController {
             При обработке запроса к эндпоинту GET /events/{id}
              необходимо отправить информацию о просмотре пользователем мероприятия с идентификатором id
          */
-        eventService.sendView(userId, id);
+        userActionSender.sendView(userId, id);
         return eventService.getEventById(id);
     }
 
     @GetMapping("recommendations")
     public List<EventShortDto> getEventsRecommendations(@RequestHeader("X-EWM-USER-ID") Long userId,
                                                         @RequestParam(defaultValue = "10") int maxResults) {
-        List<EventShortDto> recommendations = eventService.getEventsRecommendations(userId, maxResults);
+        List<EventShortDto> recommendations = eventRecommendationService.getEventsRecommendations(userId, maxResults);
         log.info("Отправлен ответ GET /events/recommendations пользователю {} с телом: {}",
                 userId, recommendations);
         return recommendations;
@@ -65,7 +69,7 @@ public class PublicEventController {
     public void addLikeToEvent(@PathVariable Long eventId,
                                @RequestHeader("X-EWM-USER-ID") Long userId) {
         log.info("Пришел PUT запрос /events/{}/like от пользователя {}", eventId, userId);
-        eventService.sendLike(userId, eventId);
+        userActionSender.sendLike(userId, eventId);
         log.info("Обработан PUT запрос /events/{}/like от пользователя {}", eventId, userId);
     }
 

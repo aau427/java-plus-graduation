@@ -2,19 +2,14 @@ package teamfive.event.service;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import ru.practicum.ewm.grpc.stats.message.RecommendedEventProto;
-import ru.practicum.ewm.stats.proto.ActionTypeProto;
 import teamfive.category.model.Category;
 import teamfive.category.storage.CategoryRepository;
-import teamfive.client.analyzer.RecommendationsClient;
-import teamfive.client.collector.CollectorClient;
 import teamfive.dto.event.EventInternalDto;
 import teamfive.dto.event.EventResponseDto;
 import teamfive.dto.event.EventShortDto;
@@ -47,8 +42,7 @@ public class EventServiceImpl implements EventService {
     private final CategoryRepository categoryRepository;
     private final EventMapper eventMapper;
     private final UserServiceClient userClient;
-    private final CollectorClient collectorClient;
-    private final RecommendationsClient recommendationsClient;
+    private final RatingEnrichment ratingEnrichment;
 
     private static final DateTimeFormatter FORMATTER = DateTimeFormatter.ISO_DATE_TIME;
 
@@ -91,14 +85,14 @@ public class EventServiceImpl implements EventService {
                     cb.lessThanOrEqualTo(root.get("eventDate"), end));
         }
 
-        Page<Event> events = eventRepository.findAll(spec, pageable);
-        Map<Long, Double> ratingsMap = getRatings(events.getContent());
-        Map<Long, UserDto> usersMap = getUsersMap(events.getContent());
+        List<Event> events = eventRepository.findAll(spec, pageable).getContent();
+        events = ratingEnrichment.enrichRatings(events);
 
-        return events.getContent().stream()
+        Map<Long, UserDto> usersMap = getUsersMap(events);
+
+        return events.stream()
                 .map(event -> {
                     EventResponseDto responseDto = eventMapper.toEventResponseDto(event);
-                    responseDto.setRating(ratingsMap.getOrDefault(event.getId(), 0.0));
                     responseDto.setInitiator(usersMap.get(event.getId()));
                     return responseDto;
                 })
@@ -228,15 +222,14 @@ public class EventServiceImpl implements EventService {
                     ));
         }
 
-        Page<Event> events = eventRepository.findAll(spec, pageable);
+        List<Event> events = eventRepository.findAll(spec, pageable).getContent();
+        events = ratingEnrichment.enrichRatings(events);
 
-        Map<Long, UserDto> userDtoMap = getUsersMap(events.getContent());
-        Map<Long, Double> ratingsMap = getRatings(events.getContent());
+        Map<Long, UserDto> userDtoMap = getUsersMap(events);
 
-        return events.getContent().stream()
+        return events.stream()
                 .map(event -> {
                     EventShortDto eventShortDto = eventMapper.toEventShortDto(event);
-                    eventShortDto.setRating(ratingsMap.getOrDefault(event.getId(), 0.0));
                     eventShortDto.setInitiator(userDtoMap.get(event.getInitiatorId()));
                     return eventShortDto;
                 })
@@ -247,16 +240,16 @@ public class EventServiceImpl implements EventService {
     public EventResponseDto getEventById(Long id) {
         log.info("Получение события по id: {}", id);
 
-        Event event = eventRepository.findById(id)
+        final Event event = eventRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Событие с id=" + id + " не найдено"));
 
         if (event.getState() != EventState.PUBLISHED) {
             throw new NotFoundException("Событие с id=" + id + " не найдено");
         }
 
-        Double rating = getRatings(List.of(event)).getOrDefault(event.getId(), 0.0);
-        event.setRating(rating);
-        EventResponseDto eventResponseDto = eventMapper.toEventResponseDto(event);
+        final Event enrichedEventevent = ratingEnrichment.enrichRating(event);
+
+        EventResponseDto eventResponseDto = eventMapper.toEventResponseDto(enrichedEventevent);
         UserDto userDto = userClient.getByIds(List.of(event.getInitiatorId()))
                 .stream()
                 .findFirst()
@@ -287,31 +280,6 @@ public class EventServiceImpl implements EventService {
 
         eventRepository.incrementConfirmedRequests(eventId, count);
     }
-
-    @Override
-    public List<EventShortDto> getEventsRecommendations(Long userId, int maxResults) {
-        List<Long> ids = recommendationsClient.getRecommendationsForUser(userId, maxResults)
-                .map(RecommendedEventProto::getEventId)
-                .toList();
-        if (ids.isEmpty()) {
-            return List.of();
-        }
-        return eventRepository.findByIdIn(ids)
-                .stream()
-                .map(eventMapper::toEventShortDto)
-                .toList();
-    }
-
-    @Override
-    public void sendView(Long userId, Long eventId) {
-        collectorClient.collectUserAction(userId, eventId, ActionTypeProto.ACTION_VIEW);
-    }
-
-    @Override
-    public void sendLike(Long userId, Long eventId) {
-        collectorClient.collectUserAction(userId, eventId, ActionTypeProto.ACTION_LIKE);
-    }
-
 
     private Pageable createPageable(String sort, int from, int size) {
         validatePaginationParams(from, size);
@@ -353,10 +321,4 @@ public class EventServiceImpl implements EventService {
                 .collect(Collectors.toMap(UserDto::getId, userDto -> userDto));
     }
 
-    private Map<Long, Double> getRatings(List<Event> eventList) {
-        List<Long> ids = eventList.stream()
-                .map(Event::getId)
-                .toList();
-        return recommendationsClient.getInteractionsCount(ids);
-    }
 }
