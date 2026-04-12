@@ -34,3 +34,7 @@ kafka:
     collector: stats.user-actions.v1
     aggregator: stats.events-similarity.v1
   auto-commit: true
+
+recommendations:
+  limit-interactions: 100
+  nearest-neighbors: 100
