@@ -24,7 +24,6 @@ import teamfive.event.view.EventInternalView;
 import teamfive.exception.ConflictException;
 import teamfive.exception.NotFoundException;
 import teamfive.exception.ValidationException;
-import teamfive.feignclient.user.UserServiceClient;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -41,8 +40,8 @@ public class EventServiceImpl implements EventService {
     private final EventRepository eventRepository;
     private final CategoryRepository categoryRepository;
     private final EventMapper eventMapper;
-    private final UserServiceClient userClient;
     private final RatingEnrichment ratingEnrichment;
+    private final UserUtility userUtility;
 
     private static final DateTimeFormatter FORMATTER = DateTimeFormatter.ISO_DATE_TIME;
 
@@ -88,14 +87,10 @@ public class EventServiceImpl implements EventService {
         List<Event> events = eventRepository.findAll(spec, pageable).getContent();
         events = ratingEnrichment.enrichRatings(events);
 
-        Map<Long, UserDto> usersMap = getUsersMap(events);
+        Map<Long, UserDto> usersMap = userUtility.getUsersMap(events);
 
         return events.stream()
-                .map(event -> {
-                    EventResponseDto responseDto = eventMapper.toEventResponseDto(event);
-                    responseDto.setInitiator(usersMap.get(event.getId()));
-                    return responseDto;
-                })
+                .map(event -> eventMapper.toEventResponseDto(event, usersMap))
                 .collect(Collectors.toList());
     }
 
@@ -160,7 +155,8 @@ public class EventServiceImpl implements EventService {
         }
 
         Event updatedEvent = eventRepository.save(event);
-        return eventMapper.toEventResponseDto(updatedEvent);
+        UserDto userDto = userUtility.getUserDto(updatedEvent.getInitiatorId());
+        return eventMapper.toEventResponseDto(updatedEvent, userDto);
     }
 
     @Override
@@ -225,14 +221,9 @@ public class EventServiceImpl implements EventService {
         List<Event> events = eventRepository.findAll(spec, pageable).getContent();
         events = ratingEnrichment.enrichRatings(events);
 
-        Map<Long, UserDto> userDtoMap = getUsersMap(events);
-
+        Map<Long, UserDto> userDtoMap = userUtility.getUsersMap(events);
         return events.stream()
-                .map(event -> {
-                    EventShortDto eventShortDto = eventMapper.toEventShortDto(event);
-                    eventShortDto.setInitiator(userDtoMap.get(event.getInitiatorId()));
-                    return eventShortDto;
-                })
+                .map(event -> eventMapper.toEventShortDto(event, userDtoMap))
                 .collect(Collectors.toList());
     }
 
@@ -249,14 +240,9 @@ public class EventServiceImpl implements EventService {
 
         final Event enrichedEventevent = ratingEnrichment.enrichRating(event);
 
-        EventResponseDto eventResponseDto = eventMapper.toEventResponseDto(enrichedEventevent);
-        UserDto userDto = userClient.getByIds(List.of(event.getInitiatorId()))
-                .stream()
-                .findFirst()
-                .orElseThrow(() -> new NotFoundException("Не найден пользователь " + event.getInitiatorId()));
-        eventResponseDto.setInitiator(userDto);
+        UserDto userDto = userUtility.getUserDto(enrichedEventevent.getInitiatorId());
 
-        return eventResponseDto;
+        return eventMapper.toEventResponseDto(enrichedEventevent, userDto);
     }
 
     @Override
@@ -307,18 +293,6 @@ public class EventServiceImpl implements EventService {
 
     private int calculatePageNumber(int from, int size) {
         return from / size;
-    }
-
-
-    private Map<Long, UserDto> getUsersMap(List<Event> eventList) {
-        List<Long> userIdList = eventList
-                .stream()
-                .map(Event::getInitiatorId)
-                .toList();
-        List<UserDto> userDtoList = userClient.getByIds(userIdList);
-
-        return userDtoList.stream()
-                .collect(Collectors.toMap(UserDto::getId, userDto -> userDto));
     }
 
 }

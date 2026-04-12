@@ -26,6 +26,7 @@ import teamfive.feignclient.user.UserServiceClient;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -37,6 +38,7 @@ public class PrivateEventServiceImpl implements PrivateEventService {
     private final UserServiceClient userClient;
     private final CategoryRepository categoryRepository;
     private final EventMapper eventMapper;
+    private final UserUtility userUtility;
 
     @Transactional
     @Override
@@ -78,8 +80,8 @@ public class PrivateEventServiceImpl implements PrivateEventService {
 
         Event savedEvent = eventRepository.save(event);
         log.info("Событие создано: id={}, title={}", savedEvent.getId(), savedEvent.getTitle());
-
-        return eventMapper.toEventResponseDto(savedEvent);
+        Map<Long, UserDto> usersMap = userUtility.getUsersMap(List.of(savedEvent));
+        return eventMapper.toEventResponseDto(savedEvent, usersMap);
     }
 
     @Override
@@ -96,7 +98,7 @@ public class PrivateEventServiceImpl implements PrivateEventService {
 
         return events.getContent().stream()
                 .map(event -> {
-                    EventShortDto eventShortDto = eventMapper.toEventShortDto(event);
+                    EventShortDto eventShortDto = eventMapper.toEventShortDto(event, Map.of(userId, userDto));
                     eventShortDto.setInitiator(userDto);
                     return eventShortDto;
                 })
@@ -111,8 +113,8 @@ public class PrivateEventServiceImpl implements PrivateEventService {
                 .orElseThrow(() -> new NotFoundException(
                         "Событие с id=" + eventId + " для пользователя с id=" + userId + " не найдено"));
 
-        EventResponseDto eventResponseDto = eventMapper.toEventResponseDto(event);
         UserDto userDto = getUserDtoOrThrow(userId);
+        EventResponseDto eventResponseDto = eventMapper.toEventResponseDto(event, userDto);
         eventResponseDto.setInitiator(userDto);
 
         return eventResponseDto;
@@ -187,7 +189,8 @@ public class PrivateEventServiceImpl implements PrivateEventService {
         }
 
         Event updatedEvent = eventRepository.save(event);
-        return eventMapper.toEventResponseDto(updatedEvent);
+        UserDto userDto = getUserDtoOrThrow(updatedEvent.getInitiatorId());
+        return eventMapper.toEventResponseDto(updatedEvent, userDto);
     }
 
 

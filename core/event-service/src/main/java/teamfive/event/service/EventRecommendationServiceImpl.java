@@ -7,10 +7,13 @@ import org.springframework.transaction.annotation.Transactional;
 import ru.practicum.ewm.grpc.stats.message.RecommendedEventProto;
 import teamfive.client.analyzer.RecommendationsClient;
 import teamfive.dto.event.EventShortDto;
+import teamfive.dto.user.UserDto;
 import teamfive.event.mapper.EventMapper;
+import teamfive.event.model.Event;
 import teamfive.event.storage.EventRepository;
 
 import java.util.List;
+import java.util.Map;
 
 @Slf4j
 @Service
@@ -21,6 +24,7 @@ public class EventRecommendationServiceImpl implements EventRecommendationServic
     private final RecommendationsClient recommendationsClient;
     private final EventRepository eventRepository;
     private final EventMapper eventMapper;
+    private final UserUtility userUtility;
 
     @Override
     public List<EventShortDto> getEventsRecommendations(Long userId, int maxResults) {
@@ -30,9 +34,13 @@ public class EventRecommendationServiceImpl implements EventRecommendationServic
         if (ids.isEmpty()) {
             return List.of();
         }
-        return eventRepository.findByIdIn(ids)
+
+        List<Event> events = eventRepository.findByIdIn(ids);
+        Map<Long, UserDto> usersMap = userUtility.getUsersMap(events);
+
+        return events
                 .stream()
-                .map(eventMapper::toEventShortDto)
+                .map(event -> eventMapper.toEventShortDto(event, usersMap))
                 .toList();
     }
 }
