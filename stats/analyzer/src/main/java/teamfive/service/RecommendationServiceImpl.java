@@ -2,6 +2,7 @@ package teamfive.service;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import ru.practicum.ewm.grpc.stats.message.InteractionsCountRequestProto;
@@ -9,7 +10,6 @@ import ru.practicum.ewm.grpc.stats.message.RecommendedEventProto;
 import ru.practicum.ewm.grpc.stats.message.SimilarEventsRequestProto;
 import ru.practicum.ewm.grpc.stats.message.UserPredictionsRequestProto;
 import teamfive.mapper.InteractionMapper;
-import teamfive.model.EventProjection;
 import teamfive.repository.EventsSimilarityRepository;
 import teamfive.repository.InteractionRepository;
 
@@ -27,8 +27,13 @@ public class RecommendationServiceImpl implements RecommendationService {
     private final EventsSimilarityRepository similarityRepository;
     private final InteractionMapper mapper;
 
-    // Количество ближайших соседей для алгоритма предсказания
-    private static final int K_NEAREST_NEIGHBORS = 100;
+    // Считает из рекомендации.limit-interactions, если нет - возьмет 100
+    @Value("${recommendations.limit-interactions:100}")
+    private int limitInteractions;
+
+    // Считает из рекомендации.nearest-neighbors, если нет - возьмет 100
+    @Value("${recommendations.nearest-neighbors:100}")
+    private int nearestNeighbors;
 
     /*
         возвращает список мероприятий с указанием с суммой максимальных весов
@@ -52,18 +57,23 @@ public class RecommendationServiceImpl implements RecommendationService {
             return Collections.emptyList();
         }
         Long[] ids = similarityRepository
-                .findEverySimilar(request.getUserId(), request.getMaxResults())
-                .stream()
-                .map(EventProjection::getEventId)
-                .toArray(Long[]::new);
-        return similarityRepository.predictScoresForList(request.getUserId(), ids, K_NEAREST_NEIGHBORS)
+                .findEverySimilar(request.getUserId(), limitInteractions).toArray(Long[]::new);
+        if (ids.length == 0) {
+            log.info("Не нашел мероприятий, с которыми пользователь {} взаимодействовал. Нечего рекомендовать!",
+                    request.getUserId());
+            return Collections.emptyList();
+        }
+
+        return similarityRepository.predictScoresForList(request.getUserId(),
+                        ids, nearestNeighbors,
+                        request.getMaxResults())
                 .stream()
                 .map(mapper::mapProjectionToProto)
                 .toList();
     }
 
-    /*  возвращает список мероприятий, с которыми не взаимодействовал пользователь,
-        но которые максимально похожи на указанное мероприятие.
+    /*  возвращает список мероприятий, с которыми пользователь не взаимодействовал,
+        максимально похожи на указанное мероприятие.
      */
     @Override
     public Stream<RecommendedEventProto> getSimilarEvents(SimilarEventsRequestProto request) {

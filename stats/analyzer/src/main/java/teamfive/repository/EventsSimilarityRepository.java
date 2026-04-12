@@ -43,24 +43,26 @@ public interface EventsSimilarityRepository extends JpaRepository<EventsSimilari
 
     @Query(nativeQuery = true,
             value = """
-                    SELECT 
+                    SELECT DISTINCT
                         CASE 
                             WHEN s.event_a = i.event_id THEN s.event_b 
                             ELSE s.event_a 
-                        END AS eventId, 
-                        s.score AS totalScore
-                    FROM interactions i
+                        END AS eventId
+                    FROM (
+                         SELECT event_id
+                         FROM interactions
+                         WHERE user_id = :userId
+                         ORDER BY timestamp desc
+                         limit :limitInteractions
+                        ) i
                     INNER JOIN events_similarity s ON (s.event_a = i.event_id OR s.event_b = i.event_id)
-                    WHERE i.user_id = :userId
-                      AND NOT EXISTS (
+                    WHERE NOT EXISTS (
                           SELECT 1 FROM interactions m 
                           WHERE m.user_id = :userId 
                             AND m.event_id = (CASE WHEN s.event_a = i.event_id THEN s.event_b ELSE s.event_a END)
                       )
-                    ORDER BY totalScore DESC
-                    LIMIT :limit
                     """)
-    List<EventProjection> findEverySimilar(@Param("userId") long userId, @Param("limit") int limit);
+    List<Long> findEverySimilar(@Param("userId") long userId, @Param("limitInteractions") int limit);
 
     @Query(nativeQuery = true,
             value = """
@@ -81,14 +83,16 @@ public interface EventsSimilarityRepository extends JpaRepository<EventsSimilari
                         JOIN interactions i ON i.user_id = :userId 
                             AND i.event_id = (CASE WHEN s.event_a = t.target_id THEN s.event_b ELSE s.event_a END)
                     ) AS ranked_neighbors
-                    WHERE neighbor_rank <= :k
+                    WHERE neighbor_rank <= :countNearest
                     GROUP BY eventId
                     ORDER BY totalScore DESC -- Сортируем от лучших предсказаний к худшим
+                    limit :maxResults
                     """)
     List<EventProjection> predictScoresForList(
             @Param("userId") long userId,
             @Param("targetIds") Long[] targetIds,
-            @Param("k") int k
+            @Param("countNearest") int countNearest,
+            @Param("maxResults") int maxResults
     );
 
 
