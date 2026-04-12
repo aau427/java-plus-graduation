@@ -52,9 +52,9 @@ public class AggregatorServiceImpl implements AggregatorService {
     private double getWeight(UserActionAvro event) {
         ActionTypeAvro type = event.getActionType();
         return switch (type) {
-            case VIEW -> 0.4;
-            case REGISTER -> 0.8;
-            case LIKE -> 1.0;
+            case VIEW -> ActionTypeConstants.VIEW;
+            case REGISTER -> ActionTypeConstants.REGISTER;
+            case LIKE -> ActionTypeConstants.LIKE;
         };
     }
 
