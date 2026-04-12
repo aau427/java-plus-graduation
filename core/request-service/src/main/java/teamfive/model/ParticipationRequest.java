@@ -31,5 +31,4 @@ public class ParticipationRequest {
 
     @Column(name = "requester_id", nullable = false)
     private Long requesterId;
-
 }

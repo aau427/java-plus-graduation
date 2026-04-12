@@ -33,14 +33,6 @@ public interface EventRepository extends JpaRepository<Event, Long>, JpaSpecific
     @Query("SELECT COUNT(e) > 0 FROM Event e WHERE e.category.id = :categoryId")
     boolean existsByCategoryId(@Param("categoryId") Long categoryId);
 
-    @Modifying
-    @Query("UPDATE Event e SET e.views = COALESCE(e.views, 0) + 1 WHERE e.id = :eventId")
-    void incrementViews(@Param("eventId") Long eventId);
-
-    @Modifying
-    @Query("UPDATE Event e SET e.views = COALESCE(e.views, 0) + 1 WHERE e.id IN :eventIds")
-    void incrementViewsBatch(@Param("eventIds") List<Long> eventIds);
-
     Optional<EventInternalView> findProjectedById(Long id);
 
     @Modifying

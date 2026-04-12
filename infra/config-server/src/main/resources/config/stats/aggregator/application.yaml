@@ -1,0 +1,14 @@
+server:
+  port: 0
+eureka:
+  instance:
+    prefer-ip-address: true
+    instance-id: ${spring.application.name}:${random.value}
+spring:
+  kafka:
+    bootstrap-servers: localhost:9092
+    userevent:
+      group: group_aggregator
+      topic: stats.user-actions.v1
+    similarity:
+      topic: stats.events-similarity.v1

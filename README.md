@@ -35,10 +35,10 @@
     - Порт: 8761.
 - **config-server**: централизованное управление конфигурациями, загружает application.yaml для каждого сервиса из
   локальных файлов, расположенных по адресам:
-            - classpath:config/core/{application}
-            - classpath:config/stats/{application}
-            - classpath:config/infra/{application}
-    - Порт: динамический.
+    - classpath:config/core/{application}
+    - classpath:config/stats/{application}
+    - classpath:config/infra/{application}
+        - Порт: динамический.
 - **gateway-server** (Spring Cloud Gateway): шлюз для маршрутизации внешних запросов к сервисам, использует Eureka для
   маршрутизации по именам сервисов
     - Порт: 8080.
@@ -57,27 +57,32 @@
 
 ## Внутренний API для взаимодействия сервисов
 
-Внутренний апи реализован через Feign-интерфейсы, расположенные  в модуле **core/commom-api/src/main/java/teamfive/feignclient/**
+Внутренний апи реализован через Feign-интерфейсы, расположенные в модуле *
+*core/commom-api/src/main/java/teamfive/feignclient/**
 а также через stats-client, расположенный в модуле **stats/stats-client**
+
 1. **EventServiceClient**
-   - увеличить количество подтвержденных запросов для события:
-   `void incrementConfirmedRequests(
-            @PathVariable("eventId") Long eventId,
-            @RequestParam("count") Integer count`
+    - увеличить количество подтвержденных запросов для события:
+      `void incrementConfirmedRequests(
+               @PathVariable("eventId") Long eventId,
+               @RequestParam("count") Integer count`
     - : получить событие по Id:
-   `EventInternalDto getEventInternalById(@PathVariable Long eventId);`
+      `EventInternalDto getEventInternalById(@PathVariable Long eventId);`
 
 2**UserClient**
-    - получить инициаторов по списку ID:
-       `List<UserDto> getByIds(List<Long> ids)`
+
+- получить инициаторов по списку ID:
+  `List<UserDto> getByIds(List<Long> ids)`
 
 3**StatsClient** (stats-server):
-    - добавить хит (просмотр):
-       `public void hit(HttpServletRequest request)`
-    - получить статистику:
-       `public List<StatDto> getStats(ParamRequest paramRequest)`
+
+- добавить хит (просмотр):
+  `public void hit(HttpServletRequest request)`
+- получить статистику:
+  `public List<StatDto> getStats(ParamRequest paramRequest)`
 
 ## Внешний API
+
 Внешний апи доступен через шлюз gateway-server на порту 8080
 спецификации:
 [Все сервисы, за исключением сервиса статистики](https://github.com/aau427/java-plus-graduation/blob/main/ewm-main-service-spec.json)

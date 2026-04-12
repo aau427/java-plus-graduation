@@ -56,6 +56,6 @@ public class EventResponseDto {
     private String state;
     private String title;
 
-    @PositiveOrZero(message = "Количество просмотров не может быть отрицательным")
-    private Long views;
+    @PositiveOrZero(message = "Рейтинг не может быть отрицательным")
+    private Double rating;
 }

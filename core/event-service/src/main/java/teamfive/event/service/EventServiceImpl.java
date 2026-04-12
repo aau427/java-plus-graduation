@@ -1,9 +1,7 @@
 package teamfive.event.service;
 
-import dto.StatDto;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
@@ -12,8 +10,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import teamfive.category.model.Category;
 import teamfive.category.storage.CategoryRepository;
-import teamfive.client.ParamRequest;
-import teamfive.client.StatClient;
 import teamfive.dto.event.EventInternalDto;
 import teamfive.dto.event.EventResponseDto;
 import teamfive.dto.event.EventShortDto;
@@ -28,14 +24,11 @@ import teamfive.event.view.EventInternalView;
 import teamfive.exception.ConflictException;
 import teamfive.exception.NotFoundException;
 import teamfive.exception.ValidationException;
-import teamfive.feignclient.user.UserServiceClient;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -47,8 +40,8 @@ public class EventServiceImpl implements EventService {
     private final EventRepository eventRepository;
     private final CategoryRepository categoryRepository;
     private final EventMapper eventMapper;
-    private final StatClient client;
-    private final UserServiceClient userClient;
+    private final RatingEnrichment ratingEnrichment;
+    private final UserUtility userUtility;
 
     private static final DateTimeFormatter FORMATTER = DateTimeFormatter.ISO_DATE_TIME;
 
@@ -91,17 +84,13 @@ public class EventServiceImpl implements EventService {
                     cb.lessThanOrEqualTo(root.get("eventDate"), end));
         }
 
-        Page<Event> events = eventRepository.findAll(spec, pageable);
-        Map<Long, Long> viewsMap = getViewsBatch(events.getContent());
-        Map<Long, UserDto> usersMap = getUsersMap(events.getContent());
+        List<Event> events = eventRepository.findAll(spec, pageable).getContent();
+        events = ratingEnrichment.enrichRatings(events);
 
-        return events.getContent().stream()
-                .map(event -> {
-                    EventResponseDto responseDto = eventMapper.toEventResponseDto(event);
-                    responseDto.setViews(viewsMap.getOrDefault(event.getId(), 0L));
-                    responseDto.setInitiator(usersMap.get(event.getId()));
-                    return responseDto;
-                })
+        Map<Long, UserDto> usersMap = userUtility.getUsersMap(events);
+
+        return events.stream()
+                .map(event -> eventMapper.toEventResponseDto(event, usersMap))
                 .collect(Collectors.toList());
     }
 
@@ -166,7 +155,8 @@ public class EventServiceImpl implements EventService {
         }
 
         Event updatedEvent = eventRepository.save(event);
-        return eventMapper.toEventResponseDto(updatedEvent);
+        UserDto userDto = userUtility.getUserDto(updatedEvent.getInitiatorId());
+        return eventMapper.toEventResponseDto(updatedEvent, userDto);
     }
 
     @Override
@@ -228,18 +218,12 @@ public class EventServiceImpl implements EventService {
                     ));
         }
 
-        Page<Event> events = eventRepository.findAll(spec, pageable);
+        List<Event> events = eventRepository.findAll(spec, pageable).getContent();
+        events = ratingEnrichment.enrichRatings(events);
 
-        Map<Long, UserDto> userDtoMap = getUsersMap(events.getContent());
-        Map<Long, Long> viewsMap = getViewsBatch(events.getContent());
-
-        return events.getContent().stream()
-                .map(event -> {
-                    EventShortDto eventShortDto = eventMapper.toEventShortDto(event);
-                    eventShortDto.setViews(viewsMap.getOrDefault(event.getId(), 0L));
-                    eventShortDto.setInitiator(userDtoMap.get(event.getInitiatorId()));
-                    return eventShortDto;
-                })
+        Map<Long, UserDto> userDtoMap = userUtility.getUsersMap(events);
+        return events.stream()
+                .map(event -> eventMapper.toEventShortDto(event, userDtoMap))
                 .collect(Collectors.toList());
     }
 
@@ -247,26 +231,18 @@ public class EventServiceImpl implements EventService {
     public EventResponseDto getEventById(Long id) {
         log.info("Получение события по id: {}", id);
 
-        Event event = eventRepository.findById(id)
+        final Event event = eventRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Событие с id=" + id + " не найдено"));
 
         if (event.getState() != EventState.PUBLISHED) {
             throw new NotFoundException("Событие с id=" + id + " не найдено");
         }
 
-        Long viewsFromStats = getViewsClient(event);
-        log.info("Просмотры из статистики: {}", viewsFromStats);
+        final Event enrichedEventevent = ratingEnrichment.enrichRating(event);
 
-        event.setViews(viewsFromStats);
+        UserDto userDto = userUtility.getUserDto(enrichedEventevent.getInitiatorId());
 
-        EventResponseDto eventResponseDto = eventMapper.toEventResponseDto(event);
-        UserDto userDto = userClient.getByIds(List.of(event.getInitiatorId()))
-                .stream()
-                .findFirst()
-                .orElseThrow(() -> new NotFoundException("Не найден пользователь " + event.getInitiatorId()));
-        eventResponseDto.setInitiator(userDto);
-
-        return eventResponseDto;
+        return eventMapper.toEventResponseDto(enrichedEventevent, userDto);
     }
 
     @Override
@@ -290,38 +266,6 @@ public class EventServiceImpl implements EventService {
 
         eventRepository.incrementConfirmedRequests(eventId, count);
     }
-
-    private Long getViewsClient(Event event) {
-        try {
-            String uri = "/events/" + event.getId();
-            LocalDateTime publishDate = event.getPublishedOn() != null ?
-                    event.getPublishedOn() : LocalDateTime.now().minusYears(1);
-
-            log.info("URI для статистики: {}, publishDate: {}", uri, publishDate);
-
-            ParamRequest paramRequest = new ParamRequest(
-                    publishDate,
-                    LocalDateTime.now(),
-                    Collections.singletonList(uri),
-                    true);
-
-            List<StatDto> stats = client.getStats(paramRequest);
-
-            log.info("Получено {} записей статистики", stats.size());
-
-            Long totalViews = stats.stream()
-                    .mapToLong(StatDto::getHits)
-                    .sum();
-
-            log.info("Общее количество просмотров из статистики: {}", totalViews);
-            return totalViews;
-
-        } catch (Exception e) {
-            log.error("Ошибка при получении статистики: {}", e.getMessage());
-            return 0L;
-        }
-    }
-
 
     private Pageable createPageable(String sort, int from, int size) {
         validatePaginationParams(from, size);
@@ -351,54 +295,4 @@ public class EventServiceImpl implements EventService {
         return from / size;
     }
 
-
-    private Map<Long, UserDto> getUsersMap(List<Event> eventList) {
-        List<Long> userIdList = eventList
-                .stream()
-                .map(Event::getInitiatorId)
-                .toList();
-        List<UserDto> userDtoList = userClient.getByIds(userIdList);
-
-        return userDtoList.stream()
-                .collect(Collectors.toMap(UserDto::getId, userDto -> userDto));
-    }
-
-    private Map<Long, Long> getViewsBatch(List<Event> events) {
-        if (events == null || events.isEmpty()) {
-            return Collections.emptyMap();
-        }
-
-        LocalDateTime start = events.stream()
-                .map(Event::getPublishedOn)
-                .filter(Objects::nonNull)
-                .min(LocalDateTime::compareTo)
-                .orElse(LocalDateTime.now().minusYears(1));
-
-        List<String> uris = events.stream()
-                .map(e -> "/events/" + e.getId())
-                .toList();
-
-        List<StatDto> stats;
-        try {
-            stats = client.getStats(ParamRequest.builder()
-                    .start(start)
-                    .end(LocalDateTime.now())
-                    .uris(uris)
-                    .unique(false)
-                    .build());
-        } catch (Exception exception) {
-            log.error("Ошибка при получении статистики для списка: {}", exception.getMessage());
-            return Collections.emptyMap();
-        }
-        if (stats == null || stats.isEmpty()) {
-            return Collections.emptyMap();
-        }
-
-        return stats.stream()
-                .collect(Collectors.toMap(
-                        s -> Long.parseLong(s.getUri().replace("/events/", "")),
-                        StatDto::getHits,
-                        Long::sum
-                ));
-    }
 }

@@ -25,4 +25,6 @@ public interface EventService {
     EventInternalDto getEventInternalById(Long id);
 
     void incrementConfirmedRequests(Long eventId, Integer count);
+
+
 }

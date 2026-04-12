@@ -1,0 +1,40 @@
+server:
+  port: 0
+
+eureka:
+  instance:
+    instance-id: ${spring.application.name}:${random.value}
+    prefer-ip-address: true
+logging:
+  level:
+    root: INFO
+
+spring:
+  sql:
+    init:
+      # Всегда выполнять скрипты при старте
+      mode: always
+  jpa:
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+    hibernate:
+      ddl-auto: none
+
+  datasource:
+    driver-class-name: org.postgresql.Driver
+    url: jdbc:postgresql://localhost:5436/analyzer-db
+    username: user
+    password: user
+
+kafka:
+  bootstrap-servers: localhost:9092
+  group-id:
+    collector: analyzer_collector
+    aggregator: analyzer_aggregator
+  topic:
+    collector: stats.user-actions.v1
+    aggregator: stats.events-similarity.v1
+  auto-commit: true
+
+recommendations:
+  limit-interactions: 100
+  nearest-neighbors: 100
